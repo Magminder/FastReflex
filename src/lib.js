@@ -2,10 +2,53 @@
  * Created by Alex Manko on 17.10.2015.
  */
 
-"use strict";
+(function() {
+    "use strict";
+
+    var app = {};
+
+    app.exception = (function() {
+        var module = {};
+        //= ./exception.js
+        return module;
+    })();
+
+    app.browserCheck = (function() {
+        var module = {};
+        //= ./browserCheck.js
+        return module;
+    })();
+
+    app.templateParse = (function() {
+        var module = {};
+        //= ./template/parse.js
+        return module;
+    })();
+
+    app.templateRender = (function() {
+        var module = {};
+        //= ./template/render.js
+        return module;
+    })();
+
+    app.observer = (function() {
+        var module = {};
+        //= ./observer.js
+        return module;
+    })();
+
+    if (window.FR) {
+        if (window.FR.observer) {
+            app.exception.doubleAppConnection();
+        } else {
+            app.exception.busyAppNames();
+        }
+    }
+    window.FR = app.observer;
+})();
 
 var checker = function() {
-
+    console.log('test');
 };
 
 //set not enumerable value to object

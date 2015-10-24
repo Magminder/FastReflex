@@ -6,13 +6,10 @@
     "browser-sync": "^2.9.11",
     "browserify": "^11.2.0",
     "gulp": "^3.9.0",
-    "gulp-insert": "^0.5.0",
     "gulp-jshint": "^1.11.2",
-    "gulp-livereload": "^3.8.1",
     "gulp-rename": "^1.2.2",
+    "gulp-rigger": "^0.5.8",
     "gulp-streamify": "^1.0.2",
-    "gulp-uglify": "^1.4.2",
-    "tiny-lr": "^0.2.1",
-    "vinyl-source-stream": "^1.1.0"
+    "gulp-uglify": "^1.4.2"
   }
 }
