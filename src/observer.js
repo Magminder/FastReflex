@@ -2,46 +2,124 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-var onChange = function(object, isArray, key, type, valueNew, valueOld) {
-
+var onChange = function(object, key, type, valueNew, valueOld) {
+    console.log('new change', object, key, type, valueNew, valueOld);
 };
 
-var observerNative = function(object, key) {
-    var isArray = object instanceof Array;
-    Object.observe(object, function(changes) {
-
+var setHiddenValue = function(object, key, value) {
+    Object.defineProperty(object, key, {
+        value: value,
+        configurable: true,
+        enumerable: false,
+        writable: true
     });
 };
 
-var observerDefineProperty = function(object, key) {
-    var isArray = object instanceof Array;
+var initObject = function(object, key, parent) {
+    Object.defineProperty(object[key], '$FR', {
+        value: {
+            parent: parent,
+            key: key
+        },
+        configurable: true,
+        enumerable: false,
+        writable: true
+    });
 };
 
-var observer = function(object, key) {};
+var hasInit = function(object) {
+    return object.hasOwnProperty('$FR');
+};
 
-var initDone = false;
-var init = function() {
-    initDone = true;
-    if (app.browserCheck.hasObserve()) {
-        observer = observerNative;
-    } else if (app.browserCheck.hasDefineProperty()) {
-        observer = observerDefineProperty;
-    } else {
-        app.exception.unsupportedBrowser();
+var observerNative = {
+    register: function (object, key) {
+        var that = this;
+        Object.observe(object, function (changes) {
+            for (var i = 0; i < changes.length; ++i) {
+                if (changes[i].name != key) continue;
+
+                that.onChangeComing(changes[i], object[key]);
+            }
+        });
+
+        if (object[key] instanceof Object) {
+            this.deepObserve(object, key, object[key]);
+        }
+    },
+    onChangeComing: function(change, parent) {
+        if (change.name == '$FR') return;
+
+        var newValue = change.object[change.name];
+
+        if ((change.type == 'add' && newValue instanceof Object) ||
+            (change.type == 'update' && newValue instanceof Object && change.oldValue != newValue)) {
+            this.deepObserve(change.object, change.name, parent);
+        }
+
+        onChange(change.object,
+            change.name,
+            change.type,
+            change.object[change.name],
+            change.oldValue);
+    },
+    deepObserve: function(object, key, parent) {
+        var list = [{object: object, key: key, parent: parent}];
+        while (list.length) {
+            var newList = [];
+            for (var i in list) {
+                this.observeObject(list[i].object, list[i].key, list[i].parent);
+                var value = list[i].object[list[i].key];
+                if (value instanceof Object) {
+                    for (var key in value) {
+                        if (value[key] instanceof Object && !hasInit(value[key])) {
+                            newList.push({object: value, key: key, parent: value});
+                        }
+                    }
+                }
+            }
+            list = newList;
+        }
+    },
+    observeObject: function(object, key, parent) {
+        var that = this;
+        initObject(object, key, parent);
+        Object.observe(object[key], function(changes) {
+            for (var i = 0; i < changes.length; ++i) {
+                that.onChangeComing(changes[i], parent);
+            }
+        });
     }
 };
 
-//todo: use VB script for getter \ setter on IE < 9?
+var observerManual = {
+    register: function(object, key) {}
+};
 
-module = function(object) {
-    Object.observe(object, function(changes) {
+var observer = {
+    register: function (object, key) {}
+};
 
-        // This asynchronous callback runs
-        changes.forEach(function(change) {
+var initDone = false;
+var init = function() {
+    //todo: use VB script for getter \ setter on IE < 9?
+    if (!app.browserCheck.hasDefineProperty()) {
+        app.exception.unsupportedBrowser();
+    }
 
-            // Letting us know what changed
-            console.log(change.type, change.name, change.oldValue, change);
-        });
+    if (app.browserCheck.hasObserve()) {
+        observer = observerNative;
+    } else {
+        observer = observerManual;
+    }
 
-    });
+
+};
+
+module = function(object, key) {
+    if (!initDone) {
+        initDone = true;
+        init();
+    }
+
+    observer.register(object, key);
 };
