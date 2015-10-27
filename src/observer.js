@@ -43,6 +43,9 @@ var observerNative = {
         });
 
         if (object[key] instanceof Object) {
+            if (hasInit(object[key])) {
+                throw new Exception('Attempt to double call for one object');
+            }
             this.deepObserve(object, key, object[key]);
         }
     },
@@ -92,7 +95,48 @@ var observerNative = {
 };
 
 var observerManual = {
-    register: function(object, key) {}
+    register: function(object, key) {
+        //var oldValue =
+        var newKey = '___' + key;
+
+        setValue(object, newKey, object[key]);
+        delete object[key];
+
+        var timeout;
+
+        Object.defineProperty(object, key, {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+                var value = object[newKey];
+                if (typeof(value) == 'object') {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(function() {
+                        onBindValueUpdate.call(object, key);
+                    }, 0);
+                }
+                console.log('get', value);
+                return object[newKey];
+            },
+            set: function(value) {
+                clearTimeout(timeout);
+                timeout = setTimeout(function() {
+                    onBindValueUpdate.call(object, key);
+                }, 0);
+                console.log('set', value);
+                object[newKey] = value;
+            }
+        });
+    },
+    getComparisonValue: function(object) {
+        if (!(object instanceof Object))
+            return object;
+        var value = '';
+        for (var i in object) {
+            value += i + '\b'; //backspace for join
+        }
+        return value;
+    }
 };
 
 var observer = {
@@ -106,13 +150,11 @@ var init = function() {
         app.exception.unsupportedBrowser();
     }
 
-    if (app.browserCheck.hasObserve()) {
+    /*if (app.browserCheck.hasObserve()) {
         observer = observerNative;
-    } else {
+    } else {*/ //for development
         observer = observerManual;
-    }
-
-
+    //}
 };
 
 module = function(object, key) {
