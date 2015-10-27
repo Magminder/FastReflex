@@ -232,7 +232,7 @@ var bind = function(htmlElement, object, key, onlyModels) {
     }
 };
 
-$(function() {
+/*$(function() {
     console.log('start');
 
     var registerChange = function() {
@@ -251,7 +251,7 @@ $(function() {
         .on('paste', inputSelector, registerChange)
         .on('cut', inputSelector, registerChange);
 
-    /*var scope = {
+    /!*var scope = {
      key: 555
      };
      window.scope = scope;
@@ -261,7 +261,7 @@ $(function() {
      var element2 = $('#npt2').get(0);
      bind(element2, scope, 'key');
      var element3 = $('#npt3').get(0);
-     bind(element3, scope, 'key');*/
+     bind(element3, scope, 'key');*!/
 
     var scope2 = {
         view: {
@@ -273,4 +273,4 @@ $(function() {
 
     var container = $('#assign-block').get(0);
     bind(container, scope2, 'view');
-});
+});*/

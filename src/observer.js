@@ -2,6 +2,7 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
+//todo: maybe remove valueOld for speed boost on object cloning?
 var onChange = function(object, key, type, valueNew, valueOld) {
     console.log('new change', object, key, type, valueNew, valueOld);
 };
@@ -16,7 +17,7 @@ var setHiddenValue = function(object, key, value) {
 };
 
 var initObject = function(object, key, parent) {
-    Object.defineProperty(object[key], '$FR', {
+    Object.defineProperty(object, '$FR', {
         value: {
             parent: parent,
             key: key
@@ -70,10 +71,12 @@ var observerNative = {
         while (list.length) {
             var newList = [];
             for (var i in list) {
+                if (!list.hasOwnProperty(i)) continue;
                 this.observeObject(list[i].object, list[i].key, list[i].parent);
                 var value = list[i].object[list[i].key];
                 if (value instanceof Object) {
                     for (var key in value) {
+                        if (!value.hasOwnProperty(key)) continue;
                         if (value[key] instanceof Object && !hasInit(value[key])) {
                             newList.push({object: value, key: key, parent: value});
                         }
@@ -85,7 +88,7 @@ var observerNative = {
     },
     observeObject: function(object, key, parent) {
         var that = this;
-        initObject(object, key, parent);
+        initObject(object[key], key, parent);
         Object.observe(object[key], function(changes) {
             for (var i = 0; i < changes.length; ++i) {
                 that.onChangeComing(changes[i], parent);
@@ -96,46 +99,126 @@ var observerNative = {
 
 var observerManual = {
     register: function(object, key) {
-        //var oldValue =
-        var newKey = '___' + key;
+        if (object[key] instanceof Object) {
+            initObject(object[key], key, object[key]);
+            this.deepObserve(object[key]);
+        }
 
-        setValue(object, newKey, object[key]);
+        this.setWatcher(object, key);
+    },
+    checkComparisonValue: function(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue) {
+        var difference = false;
+        if (currentValue != cacheValue) {
+            if (currentValue instanceof Object) {
+                initObject(currentValue, key, object);
+                this.deepObserve(currentValue);
+            }
+            onChange(object, key, 'update', currentValue, cacheValue);
+            difference = true;
+        }
+
+        //newValue and oldValue are objects and keys are different
+        if (!difference && currentValue instanceof Object && currentComparisonValue != cacheComparisonValue) {
+            var newKeys = Object.keys(currentValue), newKeysMap = {},
+                oldKeys = Object.keys(cacheValue), oldKeysMap = {},
+                i, value;
+
+            for (i = 0; i < oldKeys.length; ++i) {
+                oldKeysMap[oldKeys[i]] = true;
+            }
+            for (i = 0; i < newKeys.length; ++i) {
+                newKeysMap[newKeys[i]] = true;
+                if (!oldKeysMap[newKeys[i]]) {
+                    value = currentValue[newKeys[i]];
+
+                    if (value instanceof Object) {
+                        initObject(value, newKeys[i], currentValue);
+                        this.deepObserve(value);
+                    }
+
+                    this.setWatcher(currentValue, newKeys[i]);
+
+                    onChange(currentValue, newKeys[i], 'add', currentValue[newKeys[i]]);
+                }
+            }
+            for (i = 0; i < oldKeys.length; ++i) {
+                if (!newKeysMap[oldKeys[i]]) {
+                    delete currentValue.$FR._observeKeys[oldKeys[i]];
+                    onChange(currentValue, oldKeys[i], 'delete', undefined, cacheValue[oldKeys[i]]);
+                }
+            }
+        }
+    },
+    getComparisonValue: function(value) {
+        if (!(value instanceof Object))
+            return false;
+        return Object.keys(value).join('\b'); //backspace for join
+    },
+    deepObserve: function(observeObject) {
+        var list = [observeObject];
+        while (list.length) {
+            var newList = [];
+
+            for (var i = 0; i < list.length; ++i) {
+                var object = list[i];
+                if (!object.$FR._observeKeys)
+                    object.$FR._observeKeys = {};
+                for (var key in object) {
+                    if (!object.hasOwnProperty(key) || object.$FR._observeKeys[key]) continue;
+
+                    if (object[key] instanceof Object) {
+                        initObject(object[key], key, object);
+                        newList.push(object);
+                    }
+
+                    this.setWatcher(object, key);
+                    object.$FR._observeKeys[key] = true;
+                }
+            }
+
+            list = newList;
+        }
+    },
+    setWatcher: function(object, key) {
+        var that = this;
+        var currentValue = object[key];
+        var cacheValue = object[key];
+        var cacheComparisonValue = this.getComparisonValue(object[key]);
+
         delete object[key];
-
-        var timeout;
+        var timeout = false;
 
         Object.defineProperty(object, key, {
             configurable: true,
             enumerable: true,
             get: function() {
-                var value = object[newKey];
-                if (typeof(value) == 'object') {
-                    clearTimeout(timeout);
+                if (!timeout && cacheValue instanceof Object) {
                     timeout = setTimeout(function() {
-                        onBindValueUpdate.call(object, key);
+                        //todo: need to save old keys to array for comparison, instead reference object in cache with the save keys as in new value
+                        timeout = false;
+                        var currentComparisonValue = that.getComparisonValue(currentValue);
+                        that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue);
+                        cacheValue = currentValue;
+                        cacheComparisonValue = currentComparisonValue;
                     }, 0);
                 }
-                console.log('get', value);
-                return object[newKey];
+                console.log('get', currentValue);
+                return currentValue;
             },
             set: function(value) {
-                clearTimeout(timeout);
-                timeout = setTimeout(function() {
-                    onBindValueUpdate.call(object, key);
-                }, 0);
+                if (!timeout) {
+                    timeout = setTimeout(function () {
+                        timeout = false;
+                        var currentComparisonValue = that.getComparisonValue(currentValue);
+                        that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue);
+                        cacheValue = currentValue;
+                        cacheComparisonValue = currentComparisonValue;
+                    }, 0);
+                }
                 console.log('set', value);
-                object[newKey] = value;
+                currentValue = value;
             }
         });
-    },
-    getComparisonValue: function(object) {
-        if (!(object instanceof Object))
-            return object;
-        var value = '';
-        for (var i in object) {
-            value += i + '\b'; //backspace for join
-        }
-        return value;
     }
 };
 
@@ -150,11 +233,12 @@ var init = function() {
         app.exception.unsupportedBrowser();
     }
 
-    /*if (app.browserCheck.hasObserve()) {
+    observer = observerManual; return; //for development only
+    if (app.browserCheck.hasObserve()) {
         observer = observerNative;
-    } else {*/ //for development
+    } else {
         observer = observerManual;
-    //}
+    }
 };
 
 module = function(object, key) {
