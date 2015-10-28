@@ -70,13 +70,11 @@ var observerNative = {
         var list = [{object: object, key: key, parent: parent}];
         while (list.length) {
             var newList = [];
-            for (var i in list) {
-                if (!list.hasOwnProperty(i)) continue;
+            for (var i = 0; i < list.length; ++i) {
                 this.observeObject(list[i].object, list[i].key, list[i].parent);
                 var value = list[i].object[list[i].key];
                 if (value instanceof Object) {
-                    for (var key in value) {
-                        if (!value.hasOwnProperty(key)) continue;
+                    for (var key in Object.keys(value)) {
                         if (value[key] instanceof Object && !hasInit(value[key])) {
                             newList.push({object: value, key: key, parent: value});
                         }
@@ -163,8 +161,8 @@ var observerManual = {
                 var object = list[i];
                 if (!object.$FR._observeKeys)
                     object.$FR._observeKeys = {};
-                for (var key in object) {
-                    if (!object.hasOwnProperty(key) || object.$FR._observeKeys[key]) continue;
+                for (var key in Object.keys(object)) {
+                    if (object.$FR._observeKeys[key]) continue;
 
                     if (object[key] instanceof Object) {
                         initObject(object[key], key, object);
@@ -182,7 +180,7 @@ var observerManual = {
     setWatcher: function(object, key) {
         var that = this;
         var currentValue = object[key];
-        var cacheValue = object[key];
+        var cacheValue = this.copyObject(currentValue);
         var cacheComparisonValue = this.getComparisonValue(object[key]);
 
         delete object[key];
@@ -198,7 +196,7 @@ var observerManual = {
                         timeout = false;
                         var currentComparisonValue = that.getComparisonValue(currentValue);
                         that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue);
-                        cacheValue = currentValue;
+                        cacheValue = that.copyObject(currentValue);
                         cacheComparisonValue = currentComparisonValue;
                     }, 0);
                 }
@@ -211,7 +209,7 @@ var observerManual = {
                         timeout = false;
                         var currentComparisonValue = that.getComparisonValue(currentValue);
                         that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue);
-                        cacheValue = currentValue;
+                        cacheValue = that.copyObject(currentValue);
                         cacheComparisonValue = currentComparisonValue;
                     }, 0);
                 }
@@ -219,6 +217,19 @@ var observerManual = {
                 currentValue = value;
             }
         });
+    },
+    copyObject: function(object) {
+        if (object instanceof Array)
+            return object.slice()
+
+        if (!(object instanceof Object))
+            return object;
+
+        var newObject = {};
+        for (var key in Object.keys(object)) {
+            newObject[key] = object[key];
+        }
+        return newObject;
     }
 };
 
