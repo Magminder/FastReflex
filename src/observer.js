@@ -6,15 +6,6 @@ var onChange = function(object, key, type, valueNew, valueOld) {
     console.log('new change', object, key, type, valueNew, valueOld);
 };
 
-var setHiddenValue = function(object, key, value) {
-    Object.defineProperty(object, key, {
-        value: value,
-        configurable: true,
-        enumerable: false,
-        writable: true
-    });
-};
-
 var initObject = function(object, key, parent) {
     Object.defineProperty(object, '$FR', {
         value: {
