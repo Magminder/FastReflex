@@ -13,6 +13,13 @@
         return module;
     })();
 
+    app.common = {};
+    add.common.object = (function() {
+        var module = {};
+        //= ./common/object.js
+        return module;
+    });
+
     app.browserCheck = (function() {
         var module = {};
         //= ./browserCheck.js

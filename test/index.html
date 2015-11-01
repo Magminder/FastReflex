@@ -13,12 +13,22 @@
         for: root.keys as index, key;
     ">
         test2
+        <span>static data</span>
+        <div>
+            <h2>Caption</h2>
+            <form>
+                <fieldset data-fr="customDef">
+                    <legend>Test legend</legend>
+                </fieldset>
+            </form>
+        </div>
     </div>
     <span data-fr="class: {test: key.field}">test4</span>
     <span data-fr="customDir: "></span>
     <div data-fr="
         if-end;
         for-end;
+        if: var4;
     "></div>
 </body>
 </html>

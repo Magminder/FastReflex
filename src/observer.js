@@ -6,22 +6,6 @@ var onChange = function(object, key, type, valueNew, valueOld) {
     console.log('new change', object, key, type, valueNew, valueOld);
 };
 
-var initObject = function(object, key, parent) {
-    Object.defineProperty(object, '$FR', {
-        value: {
-            parent: parent,
-            key: key
-        },
-        configurable: true,
-        enumerable: false,
-        writable: true
-    });
-};
-
-var hasInit = function(object) {
-    return object.hasOwnProperty('$FR');
-};
-
 var observerNative = {
     register: function (object, key) {
         var that = this, i;
@@ -34,7 +18,7 @@ var observerNative = {
         });
 
         if (object[key] instanceof Object) {
-            if (hasInit(object[key])) {
+            if (app.common.object.hasInit(object[key])) {
                 throw new Exception('Attempt to double call for one object');
             }
             this.deepObserve(object, key, object[key]);
@@ -66,7 +50,7 @@ var observerNative = {
                 if (!(value instanceof Object)) continue;
 
                 for (j in value) {
-                    if (value.hasOwnProperty(j) && value[j] instanceof Object && !hasInit(value[j])) {
+                    if (value.hasOwnProperty(j) && value[j] instanceof Object && !app.common.object.hasInit(value[j])) {
                         newList.push({object: value, key: j, parent: value});
                     }
                 }
@@ -76,7 +60,7 @@ var observerNative = {
     },
     observeObject: function(object, key, parent) {
         var that = this, i;
-        initObject(object[key], key, parent);
+        app.common.object.init(object[key], key, parent);
         Object.observe(object[key], function(changes) {
             for (i = 0; i < changes.length; ++i) {
                 that.onChangeComing(changes[i], parent);
@@ -88,7 +72,7 @@ var observerNative = {
 var observerManual = {
     register: function(object, key) {
         if (object[key] instanceof Object) {
-            initObject(object[key], key, object[key]);
+            app.common.object.init(object[key], key, object[key]);
             this.deepObserve(object[key]);
         }
 
@@ -110,7 +94,7 @@ var observerManual = {
                     value = currentValue[newKeys[i]];
 
                     if (value instanceof Object) {
-                        initObject(value, newKeys[i], currentValue);
+                        app.common.object.init(value, newKeys[i], currentValue);
                         this.deepObserve(value);
                     }
 
@@ -145,7 +129,7 @@ var observerManual = {
                     if (!object.hasOwnProperty(key) || object.$FR._observeKeys[key]) continue;
 
                     if (object[key] instanceof Object) {
-                        initObject(object[key], key, object);
+                        app.common.object.init(object[key], key, object);
                         newList.push(object[key]);
                     }
 
@@ -191,7 +175,7 @@ var observerManual = {
                 }
 
                 if (currentValue instanceof Object) {
-                    initObject(currentValue, key, object);
+                    app.common.object.init(currentValue, key, object);
                     that.deepObserve(currentValue);
                 }
                 onChange(object, key, 'update', currentValue, cacheValue);
