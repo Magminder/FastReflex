@@ -6,6 +6,13 @@ var onChange = function(object, key, type, valueNew, valueOld) {
     console.log('new change', object, key, type, valueNew, valueOld);
 };
 
+var initObject = function(object, key, parent) {
+    app.common.object.init(object, {
+        key: key,
+        parent: parent
+    });
+};
+
 var observerNative = {
     register: function (object, key) {
         var that = this, i;
@@ -60,7 +67,7 @@ var observerNative = {
     },
     observeObject: function(object, key, parent) {
         var that = this, i;
-        app.common.object.init(object[key], key, parent);
+        initObject(object[key], key, parent);
         Object.observe(object[key], function(changes) {
             for (i = 0; i < changes.length; ++i) {
                 that.onChangeComing(changes[i], parent);
@@ -72,7 +79,7 @@ var observerNative = {
 var observerManual = {
     register: function(object, key) {
         if (object[key] instanceof Object) {
-            app.common.object.init(object[key], key, object[key]);
+            initObject(object[key], key, object[key]);
             this.deepObserve(object[key]);
         }
 
@@ -94,7 +101,7 @@ var observerManual = {
                     value = currentValue[newKeys[i]];
 
                     if (value instanceof Object) {
-                        app.common.object.init(value, newKeys[i], currentValue);
+                        initObject(value, newKeys[i], currentValue);
                         this.deepObserve(value);
                     }
 
@@ -129,7 +136,7 @@ var observerManual = {
                     if (!object.hasOwnProperty(key) || object.$FR._observeKeys[key]) continue;
 
                     if (object[key] instanceof Object) {
-                        app.common.object.init(object[key], key, object);
+                        initObject(object[key], key, object);
                         newList.push(object[key]);
                     }
 
@@ -175,7 +182,7 @@ var observerManual = {
                 }
 
                 if (currentValue instanceof Object) {
-                    app.common.object.init(currentValue, key, object);
+                    initObject(currentValue, key, object);
                     that.deepObserve(currentValue);
                 }
                 onChange(object, key, 'update', currentValue, cacheValue);

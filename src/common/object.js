@@ -3,12 +3,9 @@
  */
 
 module = {
-    init: function(object, key, parent) {
+    init: function(object, value) {
         Object.defineProperty(object, '$FR', {
-            value: {
-                parent: parent,
-                key: key
-            },
+            value: value instanceof Object ? value : {},
             configurable: true,
             enumerable: false,
             writable: true
