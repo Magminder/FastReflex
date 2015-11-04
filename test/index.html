@@ -10,7 +10,7 @@
 
     <div data-fr="
         if-begin: var2;
-        for: root.keys as index, key;
+        for-begin: root.keys as index, key;
     ">
         test2
         <span>static data</span>
@@ -23,12 +23,19 @@
             </form>
         </div>
     </div>
-    <span data-fr="class: {test: key.field}">test4</span>
+    <span data-fr="
+        class: {test: key.field};
+        for-middle;
+    ">test4</span>
     <span data-fr="customDir: "></span>
     <div data-fr="
         if-end;
         for-end;
         if: var4;
     "></div>
+
+    <script type="text/javascript">
+        FR.parse(document.body);
+    </script>
 </body>
 </html>

@@ -14,11 +14,11 @@
     })();
 
     app.common = {};
-    add.common.object = (function() {
+    app.common.object = (function() {
         var module = {};
         //= ./common/object.js
         return module;
-    });
+    })();
 
     app.browserCheck = (function() {
         var module = {};
@@ -52,6 +52,7 @@
         }
     }
     window.FR = app.observer;
+    window.FR.parse = app.templateParse;
 })();
 
 var checker = function() {
