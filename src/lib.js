@@ -52,7 +52,10 @@
         }
     }
     window.FR = app.observer;
+
+    //todo: remove this ability from outer interface
     window.FR.parse = app.templateParse;
+    window.FR.render = app.templateRender.renderRootElement;
 })();
 
 var checker = function() {

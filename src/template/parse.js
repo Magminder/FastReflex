@@ -20,6 +20,7 @@ var initDomObject = function(domObject, domRoot) {
  * @returns {Array}
  */
 var parseDefinition = function(domObject) {
+    if (!(domObject instanceof HTMLElement)) return [];
     if (!domObject.hasAttribute('data-fr')) return [];
     var attr = domObject.getAttribute('data-fr').trim();
     if (!attr) return [];
@@ -199,12 +200,13 @@ var parse = function(domRoot) {
             //add all child elements for parse queue
             for (j = 0, jLen = domObject.childNodes.length; j < jLen; ++j) {
                 childNode = domObject.childNodes[j];
-                if (!(childNode instanceof HTMLElement)) continue;
                 newList.push(childNode);
             }
         }
         list = newList;
     }
+
+    domRoot.$FR.template = domRoot.cloneNode(true);
 };
 
 module = parse;
