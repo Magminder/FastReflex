@@ -76,6 +76,7 @@ var observerNative = {
     }
 };
 
+//todo: observe length for arrays
 var observerManual = {
     register: function(object, key) {
         if (object[key] instanceof Object) {
