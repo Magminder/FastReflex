@@ -14,5 +14,15 @@ module = {
 
     hasInit: function(object) {
         return object.hasOwnProperty('$FR');
+    },
+
+    serialize: function() {
+        var s = '';
+        for (var i in value) {
+            if (value.hasOwnProperty(i)) {
+                s += i + ':' + value[i] + '#';
+            }
+        }
+        return s;
     }
 };
