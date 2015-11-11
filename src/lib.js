@@ -7,6 +7,7 @@
 
     var app = {};
 
+    //todo: remove closures, add local variables to object as properties?
     app.exception = (function() {
         var module = {};
         //= ./exception.js
@@ -17,6 +18,12 @@
     app.common.object = (function() {
         var module = {};
         //= ./common/object.js
+        return module;
+    })();
+
+    app.register = (function() {
+        var module = {};
+        //= ./register/register.js
         return module;
     })();
 
@@ -53,9 +60,23 @@
     }
     window.FR = app.observer;
 
-    //todo: remove this ability from outer interface
+    window.FR.register = app.register;
+
+    //todo: remove this ability from outer interface after testing
     window.FR.parse = app.templateParse;
     window.FR.render = app.templateRender.renderRootElement;
+
+    //include frame scripts
+
+    //-- checkers
+    //= ./frame/checker/attribute.js
+    //= ./frame/checker/class.js
+
+    //-- statements
+    //operators
+    //= ./frame/statement/operator/class.js
+    //= ./frame/statement/operator/for.js
+    //= ./frame/statement/operator/if.js
 })();
 
 var checker = function() {
@@ -102,7 +123,6 @@ var setContainerValue = function(key, htmlElement, value) {
         return;
     }
 
-    //todo: make struct
     var eli = 0, ellen = htmlElement.childNodes.length;
 
     for (var tpi = 0, tplen = htmlElement.__templateNodes.length; tpi < tplen; ++tpi) {
@@ -152,7 +172,6 @@ var onInputValueUpdate = function() {
     if (this.___oldValue != this.value) {
         this.___oldValue = this.value;
         this.___object[this.___key] = this.value;
-        //todo: call watchers
         console.log('change to', this.value);
     }
 };

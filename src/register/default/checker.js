@@ -4,15 +4,15 @@
 
 module = {
     //returns value for comparion new value with old
-    comparison: function(value) {
-        return app.common.object.serialize(value);
+    hash: function(domObject) {
+        throw 'Hash function must be implemented';
     },
     //returns value for saving
-    value: function() {
-        throw 'Value function must be implemented';
+    get: function(domObject) {
+        throw 'Get function must be implemented';
     },
     //applies value to dom object
-    apply: function(domObject, value) {
-        throw 'Apply function must be implemented';
+    set: function(domObject, value) {
+        throw 'Set function must be implemented';
     }
 };

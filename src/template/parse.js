@@ -66,6 +66,7 @@ var parseDefinition = function(domObject) {
  * @param commandsList
  */
 var processOperators = function(domObject, openCommands, commandsList) {
+    //todo: check collisions (mb only for dev environment?) and create statements queue
     var definitions = parseDefinition(domObject),
         objectOpenCommands = [], objectMiddleCommands = {},
         isBegin, isEnd, isSingle, commandDefinition, i, iLen,

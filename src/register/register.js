@@ -3,7 +3,7 @@
  */
 
 var defaults = {};
-defaults['checker'] = (function() {
+defaults.checker = (function() {
     var module = {};
     //= ./default/checker.js
     return module;

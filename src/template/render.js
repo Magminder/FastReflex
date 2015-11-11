@@ -8,7 +8,8 @@ var processRenderQueue = function() {
 
     var queueElement, domElement, value,
         rootValue = renderQueue[0].object[renderQueue[0].key];
-    while (queueElement = renderQueue.unshift()) {
+    while (renderQueue.length) {
+        queueElement = renderQueue.unshift();
         domElement = queueElement.domElement;
         value = queueElement.object[queueElement.key];
 
