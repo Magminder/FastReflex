@@ -172,11 +172,12 @@ var parse = function(domRoot) {
         throw 'Unsupported DOM element type';
     if (app.common.object.hasInit(domRoot))
         throw 'Dom object can\'t be used more than once';
+    domRoot.$FR.template = domRoot.cloneNode(true);
     initDomObject(domRoot, domRoot);
     domRoot.$FR.commandsList = []; //saves command lists in root element
 
-    var list = [domRoot], newList, i, iLen, j, jLen, childNode, domObject,
-        openCommands = [], lastParent = null;
+    var list = [domRoot.$FR.template], newList, i, iLen, j, jLen, childNode, domObject,
+        openCommands = [], lastParent = null, templateRoot = domRoot.$FR.template;
     while (list.length) {
         newList = [];
         for (i = 0, iLen = list.length; i < iLen; ++i) {
@@ -189,11 +190,8 @@ var parse = function(domRoot) {
                 lastParent = domObject.parentNode;
             }
 
-            //root element already was initialized
-            if (domRoot != domObject) {
-                if (app.common.object.hasInit(domObject)) continue;
-                initDomObject(domObject, domRoot);
-            }
+            if (app.common.object.hasInit(domObject)) continue;
+            initDomObject(domObject, templateRoot);
 
             domObject.$FR.operators = processOperators(domObject, openCommands, domRoot.$FR.commandsList);
             if (!domObject.childNodes.length) continue;
@@ -206,8 +204,6 @@ var parse = function(domRoot) {
         }
         list = newList;
     }
-
-    domRoot.$FR.template = domRoot.cloneNode(true);
 };
 
 module = parse;
