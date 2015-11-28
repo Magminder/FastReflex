@@ -68,15 +68,22 @@
 
     //include frame scripts
 
+    //-- parameter
+    //= ./frame/parameter/list.js
+    //= ./frame/parameter/object.js
+    //= ./frame/parameter/variable.js
+
     //-- checkers
     //= ./frame/checker/attribute.js
     //= ./frame/checker/class.js
 
     //-- statements
-    //operators
-    //= ./frame/statement/operator/class.js
-    //= ./frame/statement/operator/for.js
-    //= ./frame/statement/operator/if.js
+    //flow
+    //= ./frame/statement/flow/for.js
+    //= ./frame/statement/flow/if.js
+    //model
+    //= ./frame/statement/model/class.js
+    //= ./frame/statement/model/value.js
 })();
 
 var checker = function() {

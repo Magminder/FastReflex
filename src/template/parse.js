@@ -70,7 +70,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
     var definitions = parseDefinition(domObject),
         objectOpenCommands = [], objectMiddleCommands = {},
         isBegin, isEnd, isSingle, commandDefinition, i, iLen,
-        j, jLen = openCommands.length, sid, commandIndex;
+        j, jLen = openCommands.length, sid;
 
     domObject.$FR.commandsByOrder = [];
     domObject.$FR.commandsBySid = {};
@@ -172,34 +172,46 @@ var parse = function(domRoot) {
         throw 'Unsupported DOM element type';
     if (app.common.object.hasInit(domRoot))
         throw 'Dom object can\'t be used more than once';
-    domRoot.$FR.template = domRoot.cloneNode(true);
     initDomObject(domRoot, domRoot);
-    domRoot.$FR.commandsList = []; //saves command lists in root element
+    domRoot.$FR.template = domRoot.cloneNode(true);
+    domRoot.$FR.rootCommandsList = []; //saves command lists in root element
+    domRoot.$FR.rootCommandsQueue = [];
 
-    var list = [domRoot.$FR.template], newList, i, iLen, j, jLen, childNode, domObject,
-        openCommands = [], lastParent = null, templateRoot = domRoot.$FR.template;
+    var list = [{
+            objects: [domRoot.$FR.template],
+            parent: domRoot.$FR.template,
+            commandsList: domRoot.$FR.rootCommandsList
+        }], newList, i, iLen, j, jLen, domObject, openCommands;
     while (list.length) {
         newList = [];
         for (i = 0, iLen = list.length; i < iLen; ++i) {
-            domObject = list[i];
+            openCommands = [];
+            systemUid = 1;
 
-            //when we switch to next dom element, all commands must be closed in previous
-            if (lastParent != domObject.parentNode) {
-                if (openCommands.length)
-                    throw 'Unclosed statement "' + openCommands[0].commandString + '"';
-                lastParent = domObject.parentNode;
+            for (j = 0, jLen = list[i].objects.length; j < jLen; ++j) {
+                domObject = list[i].objects[j];
+
+                if (app.common.object.hasInit(domObject)) continue;
+                initDomObject(domObject, list[i].parent);
+
+                domObject.$FR.operators = processOperators(domObject, openCommands, list[i].commandsList);
+                if (!domObject.childNodes.length) continue;
+
+                //add all child elements for parse queue
+                domObject.$FR.commandsList = [];
+                newList.push({
+                    objects: domObject.childNodes,
+                    parent: domObject,
+                    commandsList: domObject.$FR.commandsList
+                });
             }
 
-            if (app.common.object.hasInit(domObject)) continue;
-            initDomObject(domObject, templateRoot);
-
-            domObject.$FR.operators = processOperators(domObject, openCommands, domRoot.$FR.commandsList);
-            if (!domObject.childNodes.length) continue;
-
-            //add all child elements for parse queue
-            for (j = 0, jLen = domObject.childNodes.length; j < jLen; ++j) {
-                childNode = domObject.childNodes[j];
-                newList.push(childNode);
+            if (openCommands.length) {
+                var statements = [];
+                for (j = 0, jLen = openCommands.length; j < jLen; ++j) {
+                    statements.push(openCommands[j].commandString);
+                }
+                throw 'Unclosed statement: "' + statements.join('", "') + '"';
             }
         }
         list = newList;

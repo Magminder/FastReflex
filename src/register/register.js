@@ -9,26 +9,52 @@ defaults.checker = (function() {
     return module;
 })();
 
+var getGroup = function(type) {
+    switch (type) {
+        case 'checker': return 'checker';
+        case 'parameter': return 'parameter';
+        case 'flow': return 'statement';
+        case 'model': return 'statement';
+    }
+};
+
 var db = {};
 var register = function(type, name, definition) {
-    if (!db[type]) db[type] = {};
+    var group = getGroup(type);
+    if (!db[group])
+        db[group] = {};
 
-    if (db[type][name])
-        throw type+' with name "' + name + '" already has been registered';
+    if (db[group][name])
+        throw group + ' with name "' + name + '" already has been registered';
 
-    db[type][name] = definition;
+    db[group][name] = {
+        type: type,
+        definition: definition
+    };
     for (var i in defaults[type]) {
         if (!defaults[type].hasOwnProperty(i)) continue;
-        if (!db[type][name].hasOwnProperty(i))
-            db[type][name][i] = defaults[type][i];
+        if (!db[group][name].definition.hasOwnProperty(i))
+            db[group][name].definition = defaults[type][i];
     }
 };
 
 module = {
+    getGroup: getGroup,
     checker: function(name, definition) {
         return register('checker', name, definition);
     },
-    getList: function(type) {
-        return db[type] || {};
+    parameter: function(name, definition) {
+        return register('parameter', name, definition);
+    },
+    flow: function(name, definition) {
+        return register('flow', name, definition);
+    },
+    model: function(name, definition) {
+        return register('model', name, definition);
+    },
+    get: function(group, name) {
+        if (!db[group] || !db[group][name])
+            throw group + ' with name "' + name + '" not registered';
+        return db[group][name];
     }
 };
