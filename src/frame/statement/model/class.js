@@ -2,12 +2,17 @@
  * Created by Alex Manko on 07.11.2015.
  */
 
-//todo: implement class model
-
 FR.register.model('class', {
     changes: 'class',
     parameters: 'object',
     apply: function(domObject, parameters) {
-
+        var classList = domObject.classList, newClassList = [], i, iLen;
+        for (i = 0, iLen = classList.length; i < iLen; ++i) {
+            //add if no such class in parameter or value is equals to true
+            if (!parameters.hasOwnProperty(classList[i]) || parameters[classList[i]]) {
+                newClassList.push(classList[i]);
+            }
+        }
+        domObject.className = newClassList.join(' ');
     }
 });

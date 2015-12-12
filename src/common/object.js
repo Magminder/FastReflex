@@ -14,5 +14,13 @@ module = {
 
     hasInit: function(object) {
         return object.hasOwnProperty('$FR');
+    },
+
+    getValueFromPath: function(object, path) {
+        //todo: implement getValueFromPath
+    },
+
+    setValueForPath: function(object, path, value) {
+        //todo: implement setValueForPath
     }
 };

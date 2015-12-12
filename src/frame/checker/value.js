@@ -3,14 +3,36 @@
  */
 
 //todo: implement value checker
-FR.register.checker('class', {
+FR.register.checker('value', {
     hash: function(domObject) {
-        return domObject.className;
+        return '';
     },
     get: function(domObject) {
-        return domObject.className;
+        return '';
     },
     set: function(domObject, value) {
-        domObject.className = value;
+        //set value
+        value = value.toString();
+
+        if (domObject instanceof HTMLSelectElement) {
+        } else if (domObject instanceof HTMLInputElement) {
+            switch (domObject.type) {
+                case 'checkbox':
+                    //todo: set value
+                    break;
+                case 'radio':
+                    //todo: set value
+                    break;
+                case 'file':
+                    //todo: need to define what to do
+                    break;
+                default:
+                    //todo: set value
+            }
+        } else if (domObject instanceof HTMLTextAreaElement) {
+            //todo: set value
+        } else if (domObject instanceof HTMLElement) {
+            //todo: set text
+        }
     }
 });
