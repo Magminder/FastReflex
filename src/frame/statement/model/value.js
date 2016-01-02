@@ -8,7 +8,8 @@ FR.register.model('value', {
     apply: function(domObject, parameters) {
         var valueChecker = app.register.get('checker', 'value');
         valueChecker.set(domObject, parameters);
-
-        //todo: implement event processing
+    },
+    init: function(domObject, parameters) {
+        //todo: implement event processing on first call?
     }
 });

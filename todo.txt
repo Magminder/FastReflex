@@ -1,0 +1,9 @@
+1. Decide how to use all methods in context of root object (without required object and key in parameters).
+	I.e. we need set object, key and dom object once in init function and then all method must know content.
+	Needs code review.
+
+2. Implement rendering. Needs additional work on models initialization.
+
+3. Thought about testing.
+
+4. Rendering on server-side? Make estimation for this feature.

@@ -2,14 +2,24 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
+var watchers = {};
+
 var onChange = function(object, key, type, valueNew, valueOld) {
-    console.log('new change', object, key, type, valueNew, valueOld);
+    var path = object.hasOwnProperty('$FR') ? object.$FR.path + '/' + key : '/';
+
+    if (!watchers.hasOwnProperty(path))
+        return; //there are no watchers for this path
+
+    for (var i = 0, iLen = watchers[path].length; i < iLen; ++i) {
+        watchers[path](valueNew, type, valueOld);
+    }
 };
 
 var initObject = function(object, key, parent) {
     app.common.object.init(object, {
         key: key,
-        parent: parent
+        parent: parent,
+        path: parent.hasOwnProperty('$FR') ? parent.$FR.path + '/' + key : ''
     });
 };
 
@@ -214,7 +224,6 @@ var observer = {
 
 var initDone = false;
 var init = function() {
-    //todo: use VB script for getter \ setter on IE < 9?
     if (!app.browserCheck.hasDefineProperty()) {
         app.exception.unsupportedBrowser();
     }
@@ -226,11 +235,31 @@ var init = function() {
     }
 };
 
-module = function(object, key) {
-    if (!initDone) {
-        initDone = true;
-        init();
-    }
+module = {
+    register: function(object, key) {
+        if (!initDone) {
+            initDone = true;
+            init();
+        }
 
-    observer.register(object, key);
+        observer.register(object, key);
+    },
+    add: function(path, callback) {
+        if (!watchers.hasOwnProperty(path))
+            watchers[path] = [];
+        watchers.push(callback);
+    },
+    remove: function(path, callback) {
+        if (!watchers.hasOwnProperty(path))
+            return;
+        for (var i = watchers[path].length - 1; i >= 0; --i) {
+            if (watchers[path][i] == callback)
+                watchers.splice(i, 1);
+            //do not break to remove all copies
+        }
+    },
+    removeAll: function(path) {
+        delete watchers[path];
+    }
 };
+

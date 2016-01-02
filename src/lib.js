@@ -21,6 +21,12 @@
         return module;
     })();
 
+    app.common.domObject = (function() {
+        var module = {};
+        //= ./common/domObject.js
+        return module;
+    })();
+
     app.register = (function() {
         var module = {};
         //= ./register/register.js
@@ -58,7 +64,11 @@
             app.exception.busyAppNames();
         }
     }
-    window.FR = app.observer;
+    window.FR = function(domObject, object, key) {
+        //todo: link value to dom object
+    };
+
+    window.FR.observer = app.observer;
 
     window.FR.register = app.register;
 
@@ -76,6 +86,7 @@
     //-- checkers
     //= ./frame/checker/attribute.js
     //= ./frame/checker/class.js
+    //= ./frame/checker/value.js
 
     //-- statements
     //flow
