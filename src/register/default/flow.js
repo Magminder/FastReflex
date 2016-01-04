@@ -1,5 +1,5 @@
 /**
- * Created by Alex Manko on 02.01.2016.
+ * Created by Alex Manko on 04.01.2016.
  */
 
 module = {

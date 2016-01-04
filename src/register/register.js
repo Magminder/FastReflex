@@ -8,6 +8,16 @@ defaults.checker = (function() {
     //= ./default/checker.js
     return module;
 })();
+defaults.model = (function() {
+    var module = {};
+    //= ./default/model.js
+    return module;
+});
+defaults.flow = (function() {
+    var module = {};
+    //= ./default/flow.js
+    return module;
+});
 
 var getGroup = function(type) {
     switch (type) {

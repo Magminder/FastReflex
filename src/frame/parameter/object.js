@@ -6,7 +6,7 @@ FR.register.parameter('object', {
     parse: function(parametersString) {
         var exploding = parametersString.split(','), i, iLen,
             key, value, values = [], keys = [], variables = [], tmp,
-            valueParser = app.register.get('parameter', 'variable');
+            valueParser = app.register.get('parameter', 'variable').definition;
 
         for (i = 0, iLen = exploding.length; i < iLen; ++i) {
             value = exploding[i].trim();

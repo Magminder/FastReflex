@@ -93,7 +93,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
             //command definition for use in common commands list and in dom elements
             commandDefinition = {
                 operator: definitions[i].operator,
-                operand: definitions[i].operand, //todo: add parsed operand
+                operand: app.common.statement.parseParameters(definitions[i].operator, definitions[i].operand),
                 isSingle: isSingle,
                 domObjects: [domObject], //every command has list of dom objects involved in processing
                 sid: sid

@@ -27,6 +27,12 @@
         return module;
     })();
 
+    app.common.statement = (function() {
+        var module = {};
+        //= ./common/statement.js
+        return module;
+    })();
+
     app.register = (function() {
         var module = {};
         //= ./register/register.js
@@ -65,7 +71,10 @@
         }
     }
     window.FR = function(domObject, object, key) {
-        //todo: link value to dom object
+        app.observer.register(object, key);
+
+        app.template.parse(domObject);
+        app.template.render(domObject, object, key);
     };
 
     window.FR.observer = app.observer;
@@ -81,6 +90,7 @@
     //-- parameter
     //= ./frame/parameter/list.js
     //= ./frame/parameter/object.js
+    //= ./frame/parameter/use.js
     //= ./frame/parameter/variable.js
 
     //-- checkers

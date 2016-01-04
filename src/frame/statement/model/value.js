@@ -6,7 +6,7 @@ FR.register.model('value', {
     changes: 'value',
     parameters: 'object',
     apply: function(domObject, parameters) {
-        var valueChecker = app.register.get('checker', 'value');
+        var valueChecker = app.register.get('checker', 'value').definition;
         valueChecker.set(domObject, parameters);
     },
     init: function(domObject, parameters) {
