@@ -4,6 +4,8 @@
 
 module = {
     parameters: 'variable',
+    isChangeFlow: true, //can change flow
+    isDefineReferences: false, //can define references to some path
     //apply value to dom object
     apply: function(domObject, parameters) {
         throw 'Apply function must be implemented';

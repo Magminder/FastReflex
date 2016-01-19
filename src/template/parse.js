@@ -67,6 +67,7 @@ var parseDefinition = function(domObject) {
  */
 var processOperators = function(domObject, openCommands, commandsList) {
     //todo: check collisions (mb only for dev environment?) and create statements queue
+    //todo: most important!!! need to build tree, based on data keys / paths / references, not on dom tree
     var definitions = parseDefinition(domObject),
         objectOpenCommands = [], objectMiddleCommands = {},
         isBegin, isEnd, isSingle, commandDefinition, i, iLen,

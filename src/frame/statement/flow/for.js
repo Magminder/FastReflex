@@ -4,6 +4,7 @@
 
 FR.register.flow('for', {
     parameters: 'use',
+    isDefineReferences: true,
     apply: function(domObject, parameters) {
         //todo: implement for flow
     }
