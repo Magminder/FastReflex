@@ -177,11 +177,14 @@ var parse = function(domRoot) {
     domRoot.$FR.template = domRoot.cloneNode(true);
     domRoot.$FR.rootCommandsList = []; //saves command lists in root element
     domRoot.$FR.rootCommandsQueue = [];
+    domRoot.$FR.plates = [];
 
+    //todo: link template node with inner (child) nodes, that contains operands
     var list = [{
             objects: [domRoot.$FR.template],
             parent: domRoot.$FR.template,
-            commandsList: domRoot.$FR.rootCommandsList
+            commandsList: domRoot.$FR.rootCommandsList,
+            plateRoot: domRoot.$FR.template
         }], newList, i, iLen, j, jLen, domObject, openCommands;
     while (list.length) {
         newList = [];

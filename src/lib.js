@@ -102,6 +102,7 @@
     //flow
     //= ./frame/statement/flow/for.js
     //= ./frame/statement/flow/if.js
+    //= ./frame/statement/flow/use.js
     //model
     //= ./frame/statement/model/class.js
     //= ./frame/statement/model/value.js
