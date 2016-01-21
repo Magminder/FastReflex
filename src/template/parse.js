@@ -63,11 +63,10 @@ var parseDefinition = function(domObject) {
  *
  * @param domObject
  * @param openCommands
- * @param commandsList
+ * @param commandDefinitions
  */
-var processOperators = function(domObject, openCommands, commandsList) {
+var processOperators = function(domObject, openCommands, commandDefinitions) {
     //todo: check collisions (mb only for dev environment?) and create statements queue
-    //todo: most important!!! need to build tree, based on data keys / paths / references, not on dom tree
     var definitions = parseDefinition(domObject),
         objectOpenCommands = [], objectMiddleCommands = {},
         isBegin, isEnd, isSingle, commandDefinition, i, iLen,
@@ -87,7 +86,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
             /** check that user do not used the save identifier
              * in more than one command for children in same parent area
              */
-            if (definitions[i].uid && commandsList[sid])
+            if (definitions[i].uid && commandDefinitions[sid])
                 throw 'Duplicate definition for "' + definitions[i].uid +
                     '" on statement "' + definitions[i].commandString + '"';
 
@@ -101,7 +100,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
             };
 
             //addition command to global list
-            commandsList[sid] = commandDefinition;
+            commandDefinitions[sid] = commandDefinition;
 
             /**if we have begin statement, save new open command in local array and copy in global array later,
              * to preventing it's closing in current dom object
@@ -125,7 +124,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
             if (!sid)
                 throw 'There is no begin statement for "' + definitions[i].commandString + '"';
 
-            commandDefinition = commandsList[sid];
+            commandDefinition = commandDefinitions[sid];
             commandDefinition.domObjects.push(domObject); //add current dom object to command
 
             if (isEnd) {
@@ -148,7 +147,7 @@ var processOperators = function(domObject, openCommands, commandsList) {
     for (i = openCommands.length - 1; i >= 0; --i) {
         if (objectMiddleCommands[openCommands[i].sid])
             continue;
-        commandDefinition = commandsList[openCommands[i].sid];
+        commandDefinition = commandDefinitions[openCommands[i].sid];
         commandDefinition.domObjects.push(domObject);
         domObject.$FR.commandsByOrder.unshift(commandDefinition);
     }
@@ -175,17 +174,16 @@ var parse = function(domRoot) {
         throw 'Dom object can\'t be used more than once';
     initDomObject(domRoot, domRoot);
     domRoot.$FR.template = domRoot.cloneNode(true);
-    domRoot.$FR.rootCommandsList = []; //saves command lists in root element
-    domRoot.$FR.rootCommandsQueue = [];
+    domRoot.$FR.childCommandsBySid = {}; //saves command lists in root element
     domRoot.$FR.plates = [];
 
     //todo: link template node with inner (child) nodes, that contains operands
     var list = [{
             objects: [domRoot.$FR.template],
             parent: domRoot.$FR.template,
-            commandsList: domRoot.$FR.rootCommandsList,
-            plateRoot: domRoot.$FR.template
-        }], newList, i, iLen, j, jLen, domObject, openCommands;
+            childCommandsBySid: domRoot.$FR.childCommandsBySid,
+            plates: domRoot.$FR.plates
+        }], newList, newListItem, i, iLen, j, jLen, domObject, openCommands;
     while (list.length) {
         newList = [];
         for (i = 0, iLen = list.length; i < iLen; ++i) {
@@ -198,16 +196,30 @@ var parse = function(domRoot) {
                 if (app.common.object.hasInit(domObject)) continue;
                 initDomObject(domObject, list[i].parent);
 
-                domObject.$FR.operators = processOperators(domObject, openCommands, list[i].commandsList);
+                processOperators(domObject, openCommands, list[i].childCommandsBySid);
+
+                if (domObject.$FR.commandsByOrder.length) {
+                    list[i].plates.push(domObject);
+                }
+
                 if (!domObject.childNodes.length) continue;
 
                 //add all child elements for parse queue
-                domObject.$FR.commandsList = [];
-                newList.push({
+                domObject.$FR.childCommandsBySid = {};
+                newListItem = {
                     objects: domObject.childNodes,
                     parent: domObject,
-                    commandsList: domObject.$FR.commandsList
-                });
+                    childCommandsBySid: domObject.$FR.childCommandsBySid
+                };
+
+                if (domObject.$FR.commandsByOrder.length) {
+                    domObject.$FR.plates = [];
+                    newListItem.plates = domObject.$FR.plates;
+                } else {
+                    newListItem.plates = list[i].plates;
+                }
+
+                newList.push(newListItem);
             }
 
             if (openCommands.length) {

@@ -3,6 +3,7 @@
 	Needs code review.
 
 2. Implement rendering. Needs additional work on models initialization.
+Notes about plates parameter: needs to use it if childCommandsBySid is empty
 
 3. Thought about testing.
 
