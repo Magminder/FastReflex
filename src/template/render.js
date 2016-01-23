@@ -2,31 +2,28 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-var renderQueue = [];
-var processRenderQueue = function() {
-    if (!renderQueue.length) return;
-
-    var queueElement, domElement, value,
-        rootValue = renderQueue[0].object[renderQueue[0].key];
-    while (renderQueue.length) {
-        queueElement = renderQueue.unshift();
-        domElement = queueElement.domElement;
-        value = queueElement.object[queueElement.key];
-
-        //todo: execute statements
-    }
+var init = function(domElement, plate, root) {
+    //todo: init statements, save dependencies
 };
 
-module = {
-    renderRootElement: function(domElement, object, key) {
-        this.addToRenderQueue(domElement, object, key);
-        processRenderQueue();
-    },
-    addToRenderQueue: function(domElement, object, key) {
-        renderQueue.push({
-            domElement: domElement,
-            object: object,
-            key: key
-        });
+var link = function(domElement, object, key) {
+
+};
+
+var getElementByPath = function(domElement, path) {
+    for (var i = 0, iLen = path.length; i < iLen; ++i) {
+        domElement = domElement.childNodes[path[i]];
+    }
+    return domElement;
+};
+
+module = function(domRoot, object, key) {
+    var root = object.hasOwnProperty(key) ? object[key] : null;
+    var plates = domRoot.$FR.plates;
+
+    //todo: init dom root statements
+
+    for (var i = 0, iLen = plates.length; i < iLen; ++i) {
+        init(getElementByPath(domRoot, plates[i].path), plates[i], root);
     }
 };

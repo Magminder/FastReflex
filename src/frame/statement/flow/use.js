@@ -6,7 +6,7 @@ FR.register.flow('use', {
     parameters: 'use',
     isDefineReferences: true,
     isChangeFlow: false,
-    apply: function(domObject, parameters) {
+    apply: function(parameters) {
         //todo: implement for flow
     }
 });

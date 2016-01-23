@@ -5,7 +5,7 @@
 FR.register.parameter('object', {
     parse: function(parametersString) {
         var exploding = parametersString.split(','), i, iLen,
-            key, value, values = [], keys = [], variables = [], tmp,
+            key, value, values = [], keys = [], variables = [], tmp, dependsOn = [],
             valueParser = app.register.get('parameter', 'variable').definition;
 
         for (i = 0, iLen = exploding.length; i < iLen; ++i) {
@@ -33,6 +33,7 @@ FR.register.parameter('object', {
             value = valueParser.parse(value);
 
             if (value.isVariable) {
+                dependsOn.push(value.value);
                 variables.push(values.length);
             }
 
@@ -43,34 +44,19 @@ FR.register.parameter('object', {
         return {
             keys: keys,
             values: values,
-            variables: variables
+            variables: variables,
+            dependsOn: dependsOn
         };
     },
-    getDepending: function(parsedParameters, currentPath) {
-        var dependValues = parsedParameters.values.slice(), i, iLen,
-            path, paths = [];
+    render: function(parsedParameters, root) {
+        var values = parsedParameters.values.slice(), i, iLen, result = {};
+
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            path = currentPath + '.' + dependValues[parsedParameters.variables[i]];
-            paths.push(path);
-            dependValues[parsedParameters.variables[i]] = path;
+            values[parsedParameters.variables[i]] = app.common.object.getValueFromPath(root, values[parsedParameters.variables[i]]);
         }
 
-        return {
-            keys: parsedParameters.keys,
-            values: dependValues,
-            variables: parsedParameters.variables,
-            paths: paths
-        }
-    },
-    render: function(dependParameters, root) {
-        var values = dependParameters.values.slice(), i, iLen, result = {};
-
-        for (i = 0, iLen = dependParameters.variables.length; i < iLen; ++i) {
-            values[dependParameters.variables[i]] = app.common.object.getValueFromPath(root, values[dependParameters.variables[i]]);
-        }
-
-        for (i = 0, iLen = dependParameters.keys.length; i < iLen; ++i) {
-            result[dependParameters.keys[i]] = values[i];
+        for (i = 0, iLen = parsedParameters.keys.length; i < iLen; ++i) {
+            result[parsedParameters.keys[i]] = values[i];
         }
 
         return result;

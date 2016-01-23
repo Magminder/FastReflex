@@ -17,10 +17,19 @@ module = {
     },
 
     getValueFromPath: function(object, path) {
-        //todo: implement getValueFromPath
+        try {
+            return eval('object.' + path);
+        } catch (e) {
+            return '';
+        }
     },
 
     setValueForPath: function(object, path, value) {
-        //todo: implement setValueForPath
+        path = path.split('.');
+        for (var i = 0, iLen = path.length - 1; i < iLen; ++i) {
+            if (!object.hasOwnProperty(path[i]))
+                object = object[path[i]] = {};
+        }
+        object[path.pop()] = value;
     }
 };

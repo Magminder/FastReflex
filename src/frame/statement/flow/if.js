@@ -4,7 +4,7 @@
 
 FR.register.flow('if', {
     parameters: 'variable',
-    apply: function(domObject, parameters) {
+    apply: function(parameters) {
         //todo: implement if flow
     }
 });

@@ -5,7 +5,7 @@
 FR.register.parameter('list', {
     parse: function(parametersString) {
         var exploding = parametersString.split(','), i, iLen,
-            value, values = [], variables = [], tmp,
+            value, values = [], variables = [], tmp, dependsOn = [],
             valueParser = app.register.get('parameter', 'variable').definition;
 
         for (i = 0, iLen = exploding.length; i < iLen; ++i) {
@@ -25,6 +25,7 @@ FR.register.parameter('list', {
             value = valueParser.parse(value);
 
             if (value.isVariable) {
+                dependsOn.push(value.value);
                 variables.push(values.length);
             }
 
@@ -33,23 +34,9 @@ FR.register.parameter('list', {
 
         return {
             values: values,
-            variables: variables
+            variables: variables,
+            dependsOn: dependsOn
         };
-    },
-    getDepending: function(parsedParameters, currentPath) {
-        var dependValues = parsedParameters.values.slice(), i, iLen,
-            path, paths = [];
-        for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            path = currentPath + '.' + dependValues[parsedParameters.variables[i]];
-            paths.push(path);
-            dependValues[parsedParameters.variables[i]] = path;
-        }
-
-        return {
-            values: dependValues,
-            variables: parsedParameters.variables,
-            paths: paths
-        }
     },
     render: function(dependParameters, root) {
         var values = dependParameters.values.slice(), i, iLen;

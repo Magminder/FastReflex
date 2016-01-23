@@ -30,20 +30,13 @@ FR.register.parameter('use', {
             isVariable: isVariable,
             isKey: value.length > 1,
             mapKey: value.length > 1 ? value[0] : false,
-            mapValue: value.length > 1 ? value[1] : value[0]
+            mapValue: value.length > 1 ? value[1] : value[0],
+            dependsOn: isVariable ? [base] : []
         };
     },
-    getDepending: function(parsedParameters, currentPath) {
-        var path = currentPath + '.' + parsedParameters.value;
-        return {
-            value: parsedParameters.isVariable ? path : parsedParameters.value,
-            isVariable: parsedParameters.isVariable,
-            paths: parsedParameters.isVariable ? [path] : []
-        }
-    },
-    render: function(dependParameters, root) {
-        return dependParameters.isVariable
-            ? app.common.object.getValueFromPath(root, dependParameters.value)
-            : dependParameters.value;
+    render: function(parsedParameters, root) {
+        return parsedParameters.isVariable
+            ? app.common.object.getValueFromPath(root, parsedParameters.value)
+            : parsedParameters.value;
     }
 });

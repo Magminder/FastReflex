@@ -52,20 +52,13 @@ FR.register.parameter('variable', {
 
         return {
             value: value,
-            isVariable: isVariable
+            isVariable: isVariable,
+            dependsOn: isVariable ? [value] : []
         };
     },
-    getDepending: function(parsedParameters, currentPath) {
-        var path = currentPath + '.' + parsedParameters.value;
-        return {
-            value: parsedParameters.isVariable ? path : parsedParameters.value,
-            isVariable: parsedParameters.isVariable,
-            paths: parsedParameters.isVariable ? [path] : []
-        }
-    },
-    render: function(dependParameters, root) {
-        return dependParameters.isVariable
-            ? app.common.object.getValueFromPath(root, dependParameters.value)
-            : dependParameters.value;
+    render: function(parsedParameters, root) {
+        return parsedParameters.isVariable
+            ? app.common.object.getValueFromPath(root, parsedParameters.value)
+            : parsedParameters.value;
     }
 });

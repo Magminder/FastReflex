@@ -84,6 +84,8 @@
     //todo: remove this ability from outer interface after testing
     window.FR.parse = app.templateParse;
     window.FR.render = app.templateRender.renderRootElement;
+    window.FR.set = app.common.object.setValueForPath;
+    window.FR.get = app.common.object.getValueFromPath;
 
     //include frame scripts
 
