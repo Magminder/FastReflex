@@ -207,6 +207,7 @@ var parse = function(domRoot) {
         return;
 
     list = [{
+        level: 1,
         path: [],
         plates: domRoot.$FR.plates,
         parent: domRoot
@@ -230,6 +231,7 @@ var parse = function(domRoot) {
                 if (operators.order.length) {
                     if (addedToPlates === false) {
                         addedToPlates = list[i].plates.push({
+                            level: list[i].level,
                             path: list[i].path,
                             commands: commandsList,
                             children: [operators]
@@ -241,12 +243,14 @@ var parse = function(domRoot) {
                     operators.index = j;
                     operators.plates = [];
                     newList.push({
+                        level: list[i].level + 1,
                         path: [],
                         plates: operators.plates,
                         parent: domElement
                     });
                 } else {
                     newList.push({
+                        level: list[i].level + 1,
                         path: list[i].path.concat(j),
                         plates: list[i].plates,
                         parent: domElement

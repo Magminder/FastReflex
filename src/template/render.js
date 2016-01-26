@@ -4,6 +4,7 @@
 
 var init = function(domElement, plate, root) {
     //todo: init statements, save dependencies
+    app.common.object.init(domElement, {});
 };
 
 var link = function(domElement, object, key) {

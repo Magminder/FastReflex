@@ -20,6 +20,7 @@
                 <fieldset data-fr="if: var3">
                     <legend>Test legend</legend>
                 </fieldset>
+
                 <input type="hidden">
 
                 <input type="checkbox">
@@ -36,48 +37,49 @@
                     <input type="radio" name="test2" value="3">
                 </fieldset>
 
-                <input type="text" value="input text text">
-                <input type="password">
+                <input type="text" value="input text text"><br />
+                <input type="password"><br />
 
-                <input type="image">
-                <input type="file">
+                <input type="image"><br />
+                <input type="file"><br />
 
-                <input type="reset" value="input reset text">
-                <input type="submit" value="input submit text">
-                <input type="button" value="input button text">
+                <input type="reset" value="input reset text"><br />
+                <input type="submit" value="input submit text"><br />
+                <input type="button" value="input button text"><br />
                 <select>
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                     <option value="5">5</option>
-                </select>
+                </select><br />
                 <select multiple="multiple">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                     <option value="5">5</option>
-                </select>
-                <textarea> custom text in textarea </textarea>
+                </select><br />
+                <textarea> custom text in textarea </textarea><br />
 
-                <button>button text</button>
+                <button>button text</button><br />
 
-                Not supported by all browsers:
-                <input type="color" value="#456789">
-                <input type="date" value="">
-                <input type="datetime" value="">
-                <input type="datetime-local" value="">
-                <input type="email" value="">
-                <input type="number" value="">
-                <input type="range" value="">
-                <input type="search" value="">
-                <input type="tel" value="">
-                <input type="time" value="">
-                <input type="url" value="">
-                <input type="month" value="">
-                <input type="week" value="">
-                <input value="">
+                <br />
+                Not supported by all browsers:<br />
+                <input type="color" value="#456789"><br />
+                <input type="date" value=""><br />
+                <input type="datetime" value=""><br />
+                <input type="datetime-local" value=""><br />
+                <input type="email" value=""><br />
+                <input type="number" value=""><br />
+                <input type="range" value=""><br />
+                <input type="search" value=""><br />
+                <input type="tel" value=""><br />
+                <input type="time" value=""><br />
+                <input type="url" value=""><br />
+                <input type="month" value=""><br />
+                <input type="week" value=""><br />
+                <input value=""><br />
             </form>
         </div>
     </div>
@@ -93,7 +95,20 @@
     "></div>
 
     <script type="text/javascript">
-        FR.parse(document.body);
+        var view = {
+            data: {
+                root: {
+                    keys: {
+                        a: {field: 2},
+                        b: {field: 0}
+                    }
+                },
+                var2: 1,
+                var3: 'test',
+                var4: false
+            }
+        };
+        FR(document.body, view, 'data');
     </script>
 </body>
 </html>

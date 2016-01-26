@@ -73,8 +73,8 @@
     window.FR = function(domObject, object, key) {
         app.observer.register(object, key);
 
-        app.template.parse(domObject);
-        app.template.render(domObject, object, key);
+        app.templateParse(domObject);
+        app.templateRender(domObject, object, key);
     };
 
     window.FR.observer = app.observer;
