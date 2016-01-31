@@ -17,7 +17,7 @@ defaults.flow = (function() {
     var module = {};
     //= ./default/flow.js
     return module;
-});
+})();
 
 var getGroup = function(type) {
     switch (type) {
@@ -44,7 +44,7 @@ var register = function(type, name, definition) {
     for (var i in defaults[type]) {
         if (!defaults[type].hasOwnProperty(i)) continue;
         if (!db[group][name].definition.hasOwnProperty(i))
-            db[group][name].definition = defaults[type][i];
+            db[group][name].definition[i] = defaults[type][i];
     }
 };
 
