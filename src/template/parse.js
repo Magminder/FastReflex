@@ -246,14 +246,73 @@ var checkOpenCommands = function(openCommands) {
     }
 };
 
+var parsePlate = function(listElement, newList) {
+    systemUid = 1; //reset uid counter
+    var openCommands = [], domElement, definitions, parsedElement, j, jLen,
+        plate = {
+            plateLevel: listElement.plateLevel,
+            path: listElement.path,
+            commands: {},
+            children: []
+        };
+
+    for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
+        domElement = listElement.parent.childNodes[j];
+
+        definitions = parseDefinition(domElement);
+        if (definitions.length || openCommands.length) {
+            //need to define what to do with elements, that do not includes into commands, but can have plates
+            newList.push({
+                plateLevel: listElement.plateLevel + 1,
+                path: [],
+                plates: parsedElement.plates,
+                parent: domElement
+            });
+        } else {
+            newList.push({
+                plateLevel: listElement.plateLevel + 1,
+                path: listElement.path.concat(j),
+                plates: listElement.plates,
+                parent: domElement
+            });
+        }
+
+        if (!definitions.length)
+            continue;
+
+        parsedElement = processOperators(definitions, openCommands, plate);
+
+        parsedElement.index = j;
+        parsedElement.template = domElement;
+        parsedElement.plates = [];
+
+        //can throws exception for document or documentElement nodes
+        //todo: check that marker can be added
+        //todo: check next node, to using as marker
+        if (parsedElement.needMarker) {
+            domElement.parentNode.insertBefore(new Text(), domElement.nextSibling);
+            parsedElement.markerIndex = parsedElement.index + 1;
+        }
+
+        plate.children.push(parsedElement);
+    }
+
+    checkOpenCommands(openCommands);
+
+    return plate;
+};
+
+var convertPlate = function(plate) {
+
+};
+
 var parse = function(domRoot) {
     if (!(domRoot instanceof HTMLElement))
         throw 'Unsupported DOM element type';
     if (app.common.object.hasInit(domRoot))
         throw 'Dom object can\'t be used more than once';
 
-    var list, newList, i, iLen, j, jLen,
-        domElement, plate,
+    var list, newList, i, iLen, plate,
         openCommands, commandsList, definitions, parsedElement;
 
     openCommands = [];
@@ -294,59 +353,12 @@ var parse = function(domRoot) {
         newList = [];
 
         for (i = 0, iLen = list.length; i < iLen; ++i) {
-            systemUid = 1; //reset uid counter
-            openCommands = [];
-            plate = {
-                plateLevel: list[i].plateLevel,
-                path: list[i].path,
-                commands: {},
-                children: []
-            };
+            plate = parsePlate(list[i], newList);
 
-            for (j = 0, jLen = list[i].parent.childNodes.length; j < jLen; ++j) {
-                domElement = list[i].parent.childNodes[j];
+            if (!plate.children.length)
+                continue;
 
-                definitions = parseDefinition(domElement);
-                if (definitions.length || openCommands.length) {
-                    newList.push({
-                        plateLevel: list[i].plateLevel + 1,
-                        path: [],
-                        plates: parsedElement.plates,
-                        parent: domElement
-                    });
-                } else {
-                    newList.push({
-                        plateLevel: list[i].plateLevel + 1,
-                        path: list[i].path.concat(j),
-                        plates: list[i].plates,
-                        parent: domElement
-                    });
-                }
-
-                if (!definitions.length)
-                    continue;
-
-                parsedElement = processOperators(definitions, openCommands, plate);
-
-                parsedElement.index = j;
-                parsedElement.template = domElement;
-                parsedElement.plates = [];
-
-                //can throws exception for document or documentElement nodes
-                //todo: check that marker can be added
-                //todo: check next node, to using as marker
-                if (parsedElement.needMarker) {
-                    domElement.parentNode.insertBefore(new Text(), domElement.nextSibling);
-                    parsedElement.markerIndex = parsedElement.index + 1;
-                }
-
-                plate.children.push(parsedElement);
-            }
-
-            checkOpenCommands(openCommands);
-
-            if (plate.children.length)
-                list[i].plates.push(plate);
+            list[i].plates.push(plate);
         }
         list = newList;
     }
