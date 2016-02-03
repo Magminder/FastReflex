@@ -58,11 +58,11 @@ var parseDefinition = function(domObject) {
     return result;
 };
 
-var upLayout = function(plate, sid, layout) {
+var upLayout = function(commands, sid, layout) {
     var queue = [], q, i, iLen, commandIndex;
 
     queue.push({
-        command: plate.commands[sid],
+        command: commands[sid],
         layout: layout
     });
 
@@ -86,18 +86,21 @@ var upLayout = function(plate, sid, layout) {
 /**
  * Builds commands layouts for dom objects
  *
+ * @param index
  * @param definitions
  * @param openCommands
- * @param commandDefinitions
+ * @param plate
  * @returns {{}}
  */
-var processOperators = function(definitions, openCommands, plate) {
+var processOperators = function(index, definitions, openCommands, commands) {
     //todo: check collisions (mb only for dev environment?)
     var objectOpenCommands = [], objectMiddleCommands = {},
         isBegin, isEnd, isSingle, commandDefinition, i, iLen,
         j, jLen = openCommands.length, sid, statement, parameter,
-        list = {}, order = [], currentElement = {}, layout = 0,
-        q, qLen;
+        list = {}, order = [], layout = 0,
+        q, qLen, needMarker = false, currentElement = {
+            index: index
+        };
 
     for (i = 0, iLen = definitions.length; i < iLen; ++i) {
         isSingle = !definitions[i].modifier;
@@ -110,7 +113,7 @@ var processOperators = function(definitions, openCommands, plate) {
             /** check that user do not used the save identifier
              * in more than one command for children in same parent area
              */
-            if (definitions[i].uid && plate.commands[sid])
+            if (definitions[i].uid && commands[sid])
                 throw 'Duplicate definition for "' + definitions[i].uid +
                     '" on statement "' + definitions[i].commandString + '"';
 
@@ -131,7 +134,7 @@ var processOperators = function(definitions, openCommands, plate) {
             ++layout;
 
             //addition command to global list
-            plate.commands[sid] = commandDefinition;
+            commands[sid] = commandDefinition;
 
             /**if we have begin statement, save new open command in local array and copy in global array later,
              * to preventing it's closing in current dom object
@@ -148,7 +151,7 @@ var processOperators = function(definitions, openCommands, plate) {
             } else {
                 //single flow operator, needs to add marker after, to identify place
                 if (statement.isChangeFlow)
-                    currentElement.needMarker = true;
+                    needMarker = true;
             }
         } else { //command was begun previously
             sid = false;
@@ -161,13 +164,13 @@ var processOperators = function(definitions, openCommands, plate) {
             if (!sid)
                 throw 'There is no begin statement for "' + definitions[i].commandString + '"';
 
-            commandDefinition = plate.commands[sid];
+            commandDefinition = commands[sid];
             commandDefinition.elements.push(currentElement); //add current dom object to command
 
             if (isEnd) {
                 //closed flow operator, needs to add marker after, to identify place
                 if (openCommands[j].statement.isChangeFlow)
-                    currentElement.needMarker = true;
+                    needMarker = true;
 
                 //command was closed, removing from global list
                 openCommands.splice(j, 1);
@@ -180,10 +183,10 @@ var processOperators = function(definitions, openCommands, plate) {
                 //adds all previous command from openCommands
                 for (q = 0, qLen = openCommands.length; q < qLen; ++q) {
                     objectMiddleCommands[openCommands[q].sid] = true;
-                    if (plate.commands[openCommands[q].sid].layout >= layout) {
-                        layout = plate.commands[openCommands[q].sid].layout + 1;
+                    if (commands[openCommands[q].sid].layout >= layout) {
+                        layout = commands[openCommands[q].sid].layout + 1;
                     } else {
-                        upLayout(plate, openCommands[q].sid, layout);
+                        upLayout(commands, openCommands[q].sid, layout);
                         ++layout;
                     }
 
@@ -191,7 +194,7 @@ var processOperators = function(definitions, openCommands, plate) {
                         break;
 
                     //only for commands, before sid, For sid elements was pushed earlier
-                    plate.commands[openCommands[q].sid].elements.push(currentElement);
+                    commands[openCommands[q].sid].elements.push(currentElement);
                 }
             }
         }
@@ -208,11 +211,11 @@ var processOperators = function(definitions, openCommands, plate) {
         if (openCommands[i].layout >= layout) {
             layout = openCommands[i].layout + 1;
         } else {
-            upLayout(plate, openCommands[i].sid, layout);
+            upLayout(commands, openCommands[i].sid, layout);
             ++layout;
         }
 
-        commandDefinition = plate.commands[openCommands[i].sid];
+        commandDefinition = commands[openCommands[i].sid];
         commandDefinition.elements.push(currentElement);
         order.unshift(commandDefinition);
     }
@@ -232,8 +235,7 @@ var processOperators = function(definitions, openCommands, plate) {
     }
 
     currentElement.order = order;
-    currentElement.list = list;
-    return currentElement;
+    return needMarker;
 };
 
 var checkOpenCommands = function(openCommands) {
@@ -246,15 +248,28 @@ var checkOpenCommands = function(openCommands) {
     }
 };
 
+var processCommands = function(plate, commands) {
+    var layouts = [], sid, i, iLen;
+    for (sid in commands) {
+        if (!commands.hasOwnProperty(sid)) continue;
+
+        commands[sid].index_min = commands[sid].elements[0].index;
+        commands[sid].index_max = commands[sid].elements[commands[sid].elements.length - 1].index;
+
+        /*if (!layouts[commands[sid].layout])
+            layouts[commands[sid].layout] = {};
+        layouts[commands[sid].layout][sid] = commands[sid];*/
+    }
+};
+
 var parsePlate = function(listElement, newList) {
     systemUid = 1; //reset uid counter
     var openCommands = [], domElement, definitions, parsedElement, j, jLen,
         plate = {
             plateLevel: listElement.plateLevel,
             path: listElement.path,
-            commands: {},
-            children: []
-        };
+            plates: []
+        }, needMarker, commands = {};
 
     for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
         domElement = listElement.parent.childNodes[j];
@@ -265,7 +280,7 @@ var parsePlate = function(listElement, newList) {
             newList.push({
                 plateLevel: listElement.plateLevel + 1,
                 path: [],
-                plates: parsedElement.plates,
+                plates: plate.plates,
                 parent: domElement
             });
         } else {
@@ -280,30 +295,21 @@ var parsePlate = function(listElement, newList) {
         if (!definitions.length)
             continue;
 
-        parsedElement = processOperators(definitions, openCommands, plate);
-
-        parsedElement.index = j;
-        parsedElement.template = domElement;
-        parsedElement.plates = [];
+        needMarker = processOperators(j, definitions, openCommands, commands);
 
         //can throws exception for document or documentElement nodes
         //todo: check that marker can be added
         //todo: check next node, to using as marker
-        if (parsedElement.needMarker) {
+        if (needMarker) {
             domElement.parentNode.insertBefore(new Text(), domElement.nextSibling);
-            parsedElement.markerIndex = parsedElement.index + 1;
         }
-
-        plate.children.push(parsedElement);
     }
 
     checkOpenCommands(openCommands);
 
+    processCommands(plate, commands);
+
     return plate;
-};
-
-var convertPlate = function(plate) {
-
 };
 
 var parse = function(domRoot) {
@@ -355,8 +361,10 @@ var parse = function(domRoot) {
         for (i = 0, iLen = list.length; i < iLen; ++i) {
             plate = parsePlate(list[i], newList);
 
-            if (!plate.children.length)
-                continue;
+            /*if (!plate.children.length)
+                continue;*/
+
+            plate.template = list[i].parent;
 
             list[i].plates.push(plate);
         }

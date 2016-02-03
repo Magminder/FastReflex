@@ -38,7 +38,7 @@ module = function(domRoot, parsedRoot, object, key) {
     //todo: every flow can add transformation. need to implement function that will perform
     //todo: translation from init indexes to actual values
 
-    for (var i = 0, iLen = plates.length; i < iLen; ++i) {
+    /*for (var i = 0, iLen = plates.length; i < iLen; ++i) {
         init(getElementByPath(domRoot, plates[i].path), plates[i], root);
-    }
+    }*/
 };
