@@ -13,6 +13,78 @@ var initDomObject = function(domObject, domRoot) {
     });
 };
 
+function CLayoutsList() {
+    this.layoutFirst = false;
+    this.layoutLast = false;
+    this.layoutsCount = 0;
+}
+CLayoutsList.prototype.add = function(layoutLeft, layoutRight) {
+    if (layoutLeft) {
+        if (layoutLeft.next != layoutRight)
+            return layoutLeft.next;
+    } else {
+        if (this.layoutFirst && (!layoutRight || layoutRight.prev))
+            return this.layoutFirst;
+    }
+
+    var layout = {
+        prev: layoutLeft || false,
+        next: layoutRight || false,
+        commands: {},
+        id: this.layoutsCount
+    };
+    ++this.layoutsCount;
+
+    if (layoutLeft)
+        layoutLeft.next = layout;
+    else
+        this.layoutFirst = layout;
+
+    if (layoutRight)
+        layoutRight.prev = layout;
+    else
+        this.layoutLast = layout;
+
+    return layout;
+};
+CLayoutsList.prototype.addBefore = function(layout) {
+    return this.add(layout && layout.prev, layout);
+};
+CLayoutsList.prototype.addAfter = function(layout) {
+    return this.add(layout, layout && layout.next);
+};
+CLayoutsList.prototype.countBetween = function(layoutLeft, layoutRight) {
+    if (!this.layoutFirst) return 0;
+
+    var result = 0;
+    if (!layoutLeft) {
+        ++result;
+        layoutLeft = this.layoutFirst;
+
+        if (layoutLeft == layoutRight)
+            return result - 1;
+        if (layoutLeft.next == layoutRight)
+            return result;
+    }
+    if (!layoutRight) {
+        ++result;
+        layoutRight = this.layoutLast;
+
+        if (layoutLeft == layoutRight)
+            return result - 1;
+        if (layoutRight.prev == layoutLeft)
+            return result;
+    }
+
+    if (layoutLeft == layoutRight)
+        return result;
+    while (layoutLeft.next != layoutRight.next) {
+        ++result;
+        layoutLeft = layoutLeft.next;
+    }
+    return result;
+};
+
 /**
  * Parsing commands from data attribute
  *
@@ -58,57 +130,33 @@ var parseDefinition = function(domObject) {
     return result;
 };
 
-var upLayout = function(commands, sid, layout) {
-    var queue = [], q, i, iLen, commandIndex;
-
-    queue.push({
-        command: commands[sid],
-        layout: layout
-    });
-
-    while (q = queue.pop()) {
-        q.command.layout = q.layout;
-        for (i = 0, iLen = q.command.elements.length; i < iLen; ++i) {
-            if (!q.command.elements[i].hasOwnProperty('list'))
-                continue; //currently added item
-
-            commandIndex = q.command.elements[i].list[q.command.sid].index;
-            if (commandIndex + 1 < q.command.elements[i].order.length &&
-                q.command.elements[i].order[commandIndex + 1].layout <= q.layout)
-                queue.push({
-                    command: q.command.elements[i].order[commandIndex + 1],
-                    layout: q.layout + 1
-                });
-        }
-    }
-};
-
 /**
  * Builds commands layouts for dom objects
  *
  * @param index
  * @param definitions
  * @param openCommands
- * @param plate
- * @returns {{}}
+ * @param commands
+ * @param layoutsList
+ * @returns {boolean}
  */
-var processOperators = function(index, definitions, openCommands, commands) {
-    //todo: check collisions (mb only for dev environment?)
-    var objectOpenCommands = [], objectMiddleCommands = {},
-        isBegin, isEnd, isSingle, commandDefinition, i, iLen,
-        j, jLen = openCommands.length, sid, statement, parameter,
-        list = {}, order = [], layout = 0,
-        q, qLen, needMarker = false, currentElement = {
-            index: index
-        };
+var processOperators = function(index, definitions, openCommands, commands, layoutsList) {
+    var currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
+        isBegin, isEnd, isSingle, commandDefinition, tmp, i, iLen,
+        openCommandsIndex = 0, openCommandsLen = openCommands.length, sid,
+        definitionsIndex = 0, definitionsLen = definitions.length,
+        currentLayout = false, j, jLen, needMarker = false;
 
-    for (i = 0, iLen = definitions.length; i < iLen; ++i) {
+    for (i = 0; i < definitionsLen; ++i) {
         isSingle = !definitions[i].modifier;
         isBegin = definitions[i].modifier == 'begin';
         isEnd = definitions[i].modifier == 'end';
 
         if (isBegin || isSingle) { //we have new command
             sid = definitions[i].uid ? 'u' + definitions[i].uid : 's' + systemUid++;
+
+            //todo: remove, for debug only!!!
+            console.log(sid, definitions[i].commandString);
 
             /** check that user do not used the save identifier
              * in more than one command for children in same parent area
@@ -117,21 +165,17 @@ var processOperators = function(index, definitions, openCommands, commands) {
                 throw 'Duplicate definition for "' + definitions[i].uid +
                     '" on statement "' + definitions[i].commandString + '"';
 
-            statement = app.register.get('statement', definitions[i].operator).definition;
-            parameter = app.register.get('parameter', statement.parameters).definition;
-
             //command definition for use in common commands list and in dom elements
             commandDefinition = {
-                statement: statement,
-                parameter: parameter,
-                operator: definitions[i].operator,
-                operand: parameter.parse(definitions[i].operand),
-                isSingle: isSingle,
-                elements: [currentElement], //every command has list of dom objects involved in processing
                 sid: sid,
-                layout: layout
+                indexStart: index,
+                indexEnd: false,
+                depends: {}
             };
-            ++layout;
+            commandDefinition.statement = app.register.get('statement', definitions[i].operator).definition;
+            commandDefinition.parameter = app.register.get('parameter', commandDefinition.statement.parameters).definition;
+            commandDefinition.operand = commandDefinition.parameter.parse(definitions[i].operand);
+            definitions[i].command = commandDefinition;
 
             //addition command to global list
             commands[sid] = commandDefinition;
@@ -140,101 +184,101 @@ var processOperators = function(index, definitions, openCommands, commands) {
              * to preventing it's closing in current dom object
               */
             if (isBegin) {
-                objectOpenCommands.push({
-                    statement: statement,
-                    layout: commandDefinition.layout,
-                    operator: definitions[i].operator,
-                    uid: definitions[i].uid,
-                    sid: sid,
-                    commandString: definitions[i].commandString
-                });
+                currentOpenCommands.push(i);
             } else {
                 //single flow operator, needs to add marker after, to identify place
-                if (statement.isChangeFlow)
+                if (commandDefinition.statement.isChangeFlow)
                     needMarker = true;
             }
         } else { //command was begun previously
             sid = false;
-            for (j = 0; j < jLen; ++j) { //find suitable opened (begin) statement for current command
-                if (openCommands[j].operator == definitions[i].operator && openCommands[j].uid == definitions[i].uid) {
-                    sid = openCommands[j].sid;
+            for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) { //find suitable opened (begin) statement for current command
+                if (openCommands[openCommandsIndex].operator == definitions[i].operator &&
+                    openCommands[openCommandsIndex].uid == definitions[i].uid) {
+                    sid = openCommands[openCommandsIndex].sid;
                     break;
                 }
+                currentCommandsList.push(openCommands[openCommandsIndex].sid);
             }
             if (!sid)
-                throw 'There is no begin statement for "' + definitions[i].commandString + '"';
+                throw 'There is no begin statement for "' + definitions[i].commandString + '" or collision detected';
+
+            if (openCommandsIndex > 0)
+                currentLayout = commands[openCommands[openCommandsIndex - 1].sid].layout;
 
             commandDefinition = commands[sid];
-            commandDefinition.elements.push(currentElement); //add current dom object to command
+
+            for (; definitionsIndex < i; ++definitionsIndex) {
+                currentLayout = layoutsList.add(currentLayout, commandDefinition.layout);
+                tmp = definitions[definitionsIndex].command;
+                tmp.layout = currentLayout;
+                currentLayout.commands[tmp.sid] = tmp;
+                currentCommandsList.push(tmp.sid);
+            }
+
+            for (j = 0, jLen = currentOpenCommands.length; j < jLen; ++j) {
+                tmp = definitions[currentOpenCommands[j]];
+                openCommands.splice(openCommandsIndex, 0, {
+                    sid: tmp.command.sid,
+                    uid: tmp.uid,
+                    operator: tmp.operator
+                });
+                currentOpenCommands = [];
+                ++openCommandsIndex;
+            }
+
+            ++definitionsIndex;
 
             if (isEnd) {
+                commandDefinition.indexEnd = index;
+
                 //closed flow operator, needs to add marker after, to identify place
-                if (openCommands[j].statement.isChangeFlow)
+                if (commandDefinition.isChangeFlow)
                     needMarker = true;
 
-                //command was closed, removing from global list
-                openCommands.splice(j, 1);
-                --jLen;
-            } else {
-                /** middle command definition. Save sid for excluding command addition for current dom object
-                 * from global list (openCommands) if it was explicity used
-                 */
-
-                //adds all previous command from openCommands
-                for (q = 0, qLen = openCommands.length; q < qLen; ++q) {
-                    objectMiddleCommands[openCommands[q].sid] = true;
-                    if (commands[openCommands[q].sid].layout >= layout) {
-                        layout = commands[openCommands[q].sid].layout + 1;
-                    } else {
-                        upLayout(commands, openCommands[q].sid, layout);
-                        ++layout;
-                    }
-
-                    if (openCommands[q].sid == sid)
-                        break;
-
-                    //only for commands, before sid, For sid elements was pushed earlier
-                    commands[openCommands[q].sid].elements.push(currentElement);
-                }
+                //command was closed, need to be removed from global list
+                currentClosedCommands.push(openCommandsIndex);
             }
+
+            currentCommandsList.push(sid);
+            ++openCommandsIndex;
         }
-
-        //command addition to dom object
-        order.push(commandDefinition);
     }
 
-    //previously opened commands addition before current dom object commands
-    for (i = openCommands.length - 1; i >= 0; --i) {
-        if (objectMiddleCommands[openCommands[i].sid])
-            continue;
+    for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) {
+        currentCommandsList.push(openCommands[openCommandsIndex].sid);
+    }
 
-        if (openCommands[i].layout >= layout) {
-            layout = openCommands[i].layout + 1;
-        } else {
-            upLayout(commands, openCommands[i].sid, layout);
-            ++layout;
+    if (openCommands.length)
+        currentLayout = commands[openCommands[openCommands.length - 1].sid].layout;
+
+    for (; definitionsIndex < definitionsLen; ++definitionsIndex) {
+        currentLayout = layoutsList.add(currentLayout, false);
+        tmp = definitions[definitionsIndex].command;
+        tmp.layout = currentLayout;
+        currentLayout.commands[tmp.sid] = tmp;
+        currentCommandsList.push(tmp.sid);
+    }
+
+    for (i = 1, iLen = currentCommandsList.length; i < iLen; ++i) {
+        for (j = i - 1; j >= 0; --j) {
+            commands[currentCommandsList[j]].depends[currentCommandsList[i]] = true;
         }
-
-        commandDefinition = commands[openCommands[i].sid];
-        commandDefinition.elements.push(currentElement);
-        order.unshift(commandDefinition);
     }
 
-    //map commands by sid for current dom object
-    for (i = 0, iLen = order.length; i < iLen; ++i) {
-        commandDefinition = order[i];
-        list[commandDefinition.sid] = {
-            index: i,
-            command: commandDefinition
-        };
+    for (j = currentClosedCommands.length - 1; j >= 0; --j) {
+        openCommands.splice(currentClosedCommands[j], 1);
     }
 
-    //copying opened (in current dom object) commands to global list
-    for (i = 0, iLen = objectOpenCommands.length; i < iLen; ++i) {
-        openCommands.push(objectOpenCommands[i]);
+    for (j = 0, jLen = currentOpenCommands.length; j < jLen; ++j) {
+        tmp = definitions[currentOpenCommands[j]];
+        openCommands.push({
+            sid: tmp.command.sid,
+            uid: tmp.uid,
+            operator: tmp.operator
+        });
     }
 
-    currentElement.order = order;
     return needMarker;
 };
 
@@ -248,28 +292,16 @@ var checkOpenCommands = function(openCommands) {
     }
 };
 
-var processCommands = function(plate, commands) {
-    var layouts = [], sid, i, iLen;
-    for (sid in commands) {
-        if (!commands.hasOwnProperty(sid)) continue;
-
-        commands[sid].index_min = commands[sid].elements[0].index;
-        commands[sid].index_max = commands[sid].elements[commands[sid].elements.length - 1].index;
-
-        /*if (!layouts[commands[sid].layout])
-            layouts[commands[sid].layout] = {};
-        layouts[commands[sid].layout][sid] = commands[sid];*/
-    }
-};
-
 var parsePlate = function(listElement, newList) {
     systemUid = 1; //reset uid counter
-    var openCommands = [], domElement, definitions, parsedElement, j, jLen,
+    var openCommands = [], domElement, definitions, j, jLen,
         plate = {
             plateLevel: listElement.plateLevel,
             path: listElement.path,
-            plates: []
-        }, needMarker, commands = {};
+            plates: [],
+            layouts: new CLayoutsList(),
+            commands: {}
+        }, needMarker;
 
     for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
         domElement = listElement.parent.childNodes[j];
@@ -279,7 +311,7 @@ var parsePlate = function(listElement, newList) {
             //need to define what to do with elements, that do not includes into commands, but can have plates
             newList.push({
                 plateLevel: listElement.plateLevel + 1,
-                path: [],
+                path: [j],
                 plates: plate.plates,
                 parent: domElement
             });
@@ -295,7 +327,7 @@ var parsePlate = function(listElement, newList) {
         if (!definitions.length)
             continue;
 
-        needMarker = processOperators(j, definitions, openCommands, commands);
+        needMarker = processOperators(j, definitions, openCommands, plate.commands, plate.layouts);
 
         //can throws exception for document or documentElement nodes
         //todo: check that marker can be added
@@ -307,8 +339,6 @@ var parsePlate = function(listElement, newList) {
 
     checkOpenCommands(openCommands);
 
-    processCommands(plate, commands);
-
     return plate;
 };
 
@@ -319,7 +349,7 @@ var parse = function(domRoot) {
         throw 'Dom object can\'t be used more than once';
 
     var list, newList, i, iLen, plate,
-        openCommands, commandsList, definitions, parsedElement;
+        openCommands, commandsList, definitions, needMarker;
 
     openCommands = [];
     commandsList = {};
@@ -330,20 +360,20 @@ var parse = function(domRoot) {
     };
 
     definitions = parseDefinition(parsedRoot.template);
-    parsedElement = processOperators(definitions, openCommands, commandsList);
 
-    //todo: remove elements, add to commands only start and end indexes (elements range)
+    if (definitions.length) {
+        needMarker = processOperators(definitions, openCommands, commandsList);
 
-    //can throws exception for document or documentElement nodes
-    //todo: check that marker can be added
-    //todo: move this logic to render section?
-    if (parsedElement.needMarker)
-        parsedElement.marker = domRoot.parentNode.insertBefore(new Text(), domRoot.nextSibling);
+        //todo: remove elements, add to commands only start and end indexes (elements range)
 
-    checkOpenCommands(openCommands);
+        //can throws exception for document or documentElement nodes
+        //todo: check that marker can be added
+        //todo: move this logic to render section?
+        if (needMarker)
+            domRoot.parentNode.insertBefore(new Text(), domRoot.nextSibling);
 
-    parsedRoot.list = parsedElement.list;
-    parsedRoot.order = parsedElement.order;
+        checkOpenCommands(openCommands);
+    }
 
     if (!domRoot.childNodes.length)
         return;
@@ -361,8 +391,8 @@ var parse = function(domRoot) {
         for (i = 0, iLen = list.length; i < iLen; ++i) {
             plate = parsePlate(list[i], newList);
 
-            /*if (!plate.children.length)
-                continue;*/
+            if (!plate.layouts.layoutFirst)
+                continue;
 
             plate.template = list[i].parent;
 
