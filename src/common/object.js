@@ -20,7 +20,7 @@ module = {
         try {
             return eval('object.' + path);
         } catch (e) {
-            return '';
+            return undefined;
         }
     },
 
@@ -30,6 +30,6 @@ module = {
             if (!object.hasOwnProperty(path[i]))
                 object = object[path[i]] = {};
         }
-        object[path.pop()] = value;
+        object[path[path.length - 1]] = value;
     }
 };

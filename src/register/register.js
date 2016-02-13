@@ -39,6 +39,7 @@ function register(type, name, definition) {
 
     db[group][name] = {
         type: type,
+        name: name,
         definition: definition
     };
     for (var i in defaults[type]) {

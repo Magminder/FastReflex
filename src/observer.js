@@ -6,7 +6,11 @@ var watchers = {};
 
 var onChange = function(object, key, type, valueNew, valueOld) {
     console.log(object, key, type, valueNew, valueOld);
-    var path = object.hasOwnProperty('$FR') ? object.$FR.path + '.' + key : '.';
+    var path = object.hasOwnProperty('$FR')
+        ? (object.$FR.path
+            ? object.$FR.path + '.' + key
+            : key)
+        : '';
 
     if (!watchers.hasOwnProperty(path))
         return; //there are no watchers for this path
@@ -20,7 +24,11 @@ var initObject = function(object, key, parent) {
     app.common.object.init(object, {
         key: key,
         parent: parent,
-        path: parent.hasOwnProperty('$FR') ? parent.$FR.path + '.' + key : ''
+        path: parent.hasOwnProperty('$FR')
+            ? (parent.$FR.path
+                ? parent.$FR.path + '.' + key
+                : key)
+            : ''
     });
 };
 

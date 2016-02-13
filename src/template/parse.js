@@ -164,9 +164,10 @@ function processOperators(index, definitions, openCommands, commands, layoutsLis
                 indexEnd: false,
                 depends: {}
             };
-            commandDefinition.statement = app.register.get('statement', definitions[i].operator).definition;
-            commandDefinition.parameter = app.register.get('parameter', commandDefinition.statement.parameters).definition;
-            commandDefinition.operand = commandDefinition.parameter.parse(definitions[i].operand);
+            commandDefinition.statement = app.register.get('statement', definitions[i].operator);
+            commandDefinition.parameter = app.register.get('parameter',
+                commandDefinition.statement.definition.parameters);
+            commandDefinition.operand = commandDefinition.parameter.definition.parse(definitions[i].operand);
             definitions[i].command = commandDefinition;
 
             //addition command to global list
