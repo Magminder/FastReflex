@@ -5,6 +5,7 @@
 var watchers = {};
 
 var onChange = function(object, key, type, valueNew, valueOld) {
+    console.log(object, key, type, valueNew, valueOld);
     var path = object.hasOwnProperty('$FR') ? object.$FR.path + '.' + key : '.';
 
     if (!watchers.hasOwnProperty(path))
@@ -127,6 +128,8 @@ var observerManual = {
                     onChange(currentValue, oldKeys[i], 'delete', undefined, cacheValue[oldKeys[i]]);
                 }
             }
+            if (currentValue instanceof Array && currentValue.length != cacheValue.length)
+                onChange(currentValue, 'length', 'update', currentValue.length, cacheValue.length);
         }
     },
     getComparisonValue: function(value) {

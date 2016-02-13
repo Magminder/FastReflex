@@ -5,14 +5,6 @@
 var systemUid = 1;
 var correctModifiers = {begin: 1, end: 1, middle: 1};
 
-var initDomObject = function(domObject, domRoot) {
-    app.common.object.init(domObject, {
-        domRoot: domRoot,
-        commandsBySid: {},
-        commandsByOrder: []
-    });
-};
-
 function CLayoutsList() {
     this.layoutFirst = false;
     this.layoutLast = false;
@@ -91,7 +83,7 @@ CLayoutsList.prototype.countBetween = function(layoutLeft, layoutRight) {
  * @param domObject
  * @returns {Array}
  */
-var parseDefinition = function(domObject) {
+function parseDefinition(domObject) {
     if (!(domObject instanceof HTMLElement)) return [];
     if (!domObject.hasAttribute('data-fr')) return [];
     var attr = domObject.getAttribute('data-fr').trim();
@@ -128,7 +120,7 @@ var parseDefinition = function(domObject) {
         result.push(parsedCommand);
     }
     return result;
-};
+}
 
 /**
  * Builds commands layouts for dom objects
@@ -140,7 +132,7 @@ var parseDefinition = function(domObject) {
  * @param layoutsList
  * @returns {boolean}
  */
-var processOperators = function(index, definitions, openCommands, commands, layoutsList) {
+function processOperators(index, definitions, openCommands, commands, layoutsList) {
     var currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
         isBegin, isEnd, isSingle, commandDefinition, tmp, i, iLen,
         openCommandsIndex = 0, openCommandsLen = openCommands.length, sid,
@@ -280,9 +272,9 @@ var processOperators = function(index, definitions, openCommands, commands, layo
     }
 
     return needMarker;
-};
+}
 
-var checkOpenCommands = function(openCommands) {
+function checkOpenCommands(openCommands) {
     if (openCommands.length) {
         var statements = [];
         for (var i = 0, iLen = openCommands.length; i < iLen; ++i) {
@@ -290,9 +282,9 @@ var checkOpenCommands = function(openCommands) {
         }
         throw 'Unclosed statement: "' + statements.join('", "') + '"';
     }
-};
+}
 
-var parsePlate = function(listElement, newList) {
+function parsePlate(listElement, newList) {
     systemUid = 1; //reset uid counter
     var openCommands = [], domElement, definitions, j, jLen,
         plate = {
@@ -340,9 +332,9 @@ var parsePlate = function(listElement, newList) {
     checkOpenCommands(openCommands);
 
     return plate;
-};
+}
 
-var parse = function(domRoot) {
+function parse(domRoot) {
     if (!(domRoot instanceof HTMLElement))
         throw 'Unsupported DOM element type';
     if (app.common.object.hasInit(domRoot))
@@ -402,6 +394,6 @@ var parse = function(domRoot) {
     }
 
     return parsedRoot;
-};
+}
 
 module = parse;

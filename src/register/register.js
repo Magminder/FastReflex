@@ -19,17 +19,17 @@ defaults.flow = (function() {
     return module;
 })();
 
-var getGroup = function(type) {
+function getGroup(type) {
     switch (type) {
         case 'checker': return 'checker';
         case 'parameter': return 'parameter';
         case 'flow': return 'statement';
         case 'model': return 'statement';
     }
-};
+}
 
 var db = {};
-var register = function(type, name, definition) {
+function register(type, name, definition) {
     var group = getGroup(type);
     if (!db[group])
         db[group] = {};
@@ -46,7 +46,7 @@ var register = function(type, name, definition) {
         if (!db[group][name].definition.hasOwnProperty(i))
             db[group][name].definition[i] = defaults[type][i];
     }
-};
+}
 
 module = {
     getGroup: getGroup,

@@ -2,7 +2,11 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-var init = function(plateDomParent, plate, root) {
+function getInitValue(domParent, command) {
+
+}
+
+function init(plateDomParent, plate, root) {
     var i, iLen, child;
 
     //convert indexes to nodes
@@ -15,7 +19,7 @@ var init = function(plateDomParent, plate, root) {
 
     //todo: init statements, save dependencies
     //app.common.object.init(domElement, {});
-};
+}
 
 var link = function(domElement, object, key) {
 
