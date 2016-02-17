@@ -2,50 +2,63 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-function CTransformation() {};
-CTransformation.prototype.add = function() {
+function CTransformation() {
+    //this.transformations =
+};
+CTransformation.prototype.add = function(indexStart, indexEnd, transformation) {
 
 };
 CTransformation.prototype.get = function(index) {
 
 };
 
+function initFlowStatement(domParent, command) {
+    command.flow = [{}];
+    command.synonyms = {};
+    if (command.statement.definition.init)
+        command.statement.definition.init(command);
+}
+
+function initModelStatement(domParent, command) {
+    var checkers = command.statement.definition.changes instanceof Array
+        ? command.statement.definition.changes
+        : [command.statement.definition.changes], i, iLen, checker, checkerName;
+    command.checkers = {};
+    for (i = 0, iLen = checkers.length; i < iLen; ++i) {
+        checker = app.register.get('checker', checkers[i]);
+        command.checkers[checker.name] = checker;
+    }
+    command.values = {};
+    for (i = command.indexStart, iLen = command.indexEnd || command.indexStart; i <= iLen; ++i) {
+        command.values[i] = {};
+
+        for (checkerName in command.checkers) {
+            if (!command.checkers.hasOwnProperty(checkerName)) continue;
+
+            command.values[i][checkerName] =
+                command.checkers[checkerName].definition.hash(domParent.childNodes[i]);
+        }
+    }
+}
 
 function initCommand(domParent, command) {
     switch (command.statement.type) {
         case 'flow':
-            command.flow = [{}];
-            command.synonyms = {};
-            if (command.statement.definition.init)
-                command.statement.definition.init(command);
+            initFlowStatement(domParent, command);
             break;
         case 'model':
-            var checkers = command.statement.definition.changes instanceof Array
-                ? command.statement.definition.changes
-                : [command.statement.definition.changes], i, iLen, checker, checkerName;
-            command.checkers = {};
-            for (i = 0, iLen = checkers.length; i < iLen; ++i) {
-                checker = app.register.get('checker', checkers[i]);
-                command.checkers[checker.name] = checker;
-            }
-            command.values = {};
-            for (i = command.indexStart, iLen = command.indexEnd || command.indexStart; i <= iLen; ++i) {
-                command.values[i] = {};
-
-                for (checkerName in command.checkers) {
-                    if (!command.checkers.hasOwnProperty(checkerName)) continue;
-
-                    command.values[i][checkerName] =
-                        command.checkers[checkerName].definition.hash(domParent.childNodes[i]);
-                }
-            }
+            initModelStatement(domParent, command);
             break;
         default:
             throw 'Unsupported statement type';
     }
 }
 
-function applyCommand(domParent, command, access) {
+function applyFlowStatement(domParent, command, access) {
+
+}
+
+function applyModelStatement(domParent, command, access) {
 
 }
 
@@ -58,12 +71,23 @@ function init(domParent, plate, access) {
         initCommand(domParent, plate.commands[i]);
     }
 
-    layout = plate.layouts.layoutFirst;
+    layout = plate.layoutsFlow.layoutFirst;
     while (layout) {
         for (i in layout.commands) {
             if (!layout.commands.hasOwnProperty(i)) continue;
 
-            applyCommand(domParent, layout.commands[i], access);
+            applyFlowStatement(domParent, layout.commands[i], access);
+        }
+
+        layout = layout.next;
+    }
+
+    layout = plate.layoutsModel.layoutFirst;
+    while (layout) {
+        for (i in layout.commands) {
+            if (!layout.commands.hasOwnProperty(i)) continue;
+
+            applyModelStatement(domParent, layout.commands[i], access);
         }
 
         layout = layout.next;

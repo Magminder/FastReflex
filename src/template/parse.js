@@ -129,15 +129,16 @@ function parseDefinition(domObject) {
  * @param definitions
  * @param openCommands
  * @param commands
- * @param layoutsList
+ * @param layoutsFlow
+ * @param layoutsModel
  * @returns {boolean}
  */
-function processOperators(index, definitions, openCommands, commands, layoutsList) {
+function processOperators(index, definitions, openCommands, commands, layoutsFlow, layoutsModel) {
     var currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
         isBegin, isEnd, isSingle, commandDefinition, tmp, i, iLen,
         openCommandsIndex = 0, openCommandsLen = openCommands.length, sid,
         definitionsIndex = 0, definitionsLen = definitions.length,
-        currentLayout = false, j, jLen, needMarker = false;
+        currentLayoutFlow = false, currentLayoutModel = false, j, jLen, needMarker = false;
 
     for (i = 0; i < definitionsLen; ++i) {
         isSingle = !definitions[i].modifier;
@@ -162,7 +163,8 @@ function processOperators(index, definitions, openCommands, commands, layoutsLis
                 sid: sid,
                 indexStart: index,
                 indexEnd: false,
-                depends: {}
+                depends: {},
+                synonyms: []
             };
             commandDefinition.statement = app.register.get('statement', definitions[i].operator);
             commandDefinition.parameter = app.register.get('parameter',
@@ -192,20 +194,39 @@ function processOperators(index, definitions, openCommands, commands, layoutsLis
                     break;
                 }
                 currentCommandsList.push(openCommands[openCommandsIndex].sid);
+                switch (commands[openCommands[openCommandsIndex].sid].statement.type) {
+                    case 'flow':
+                        currentLayoutFlow = commands[openCommands[openCommandsIndex].sid].layout;
+                        break;
+                    case 'model':
+                        currentLayoutModel = commands[openCommands[openCommandsIndex].sid].layout;
+                        break;
+                    default:
+                        throw 'Unsupported statement type';
+                }
             }
             if (!sid)
                 throw 'There is no begin statement for "' + definitions[i].commandString + '" or collision detected';
 
-            if (openCommandsIndex > 0)
-                currentLayout = commands[openCommands[openCommandsIndex - 1].sid].layout;
-
             commandDefinition = commands[sid];
 
             for (; definitionsIndex < i; ++definitionsIndex) {
-                currentLayout = layoutsList.add(currentLayout, commandDefinition.layout);
                 tmp = definitions[definitionsIndex].command;
-                tmp.layout = currentLayout;
-                currentLayout.commands[tmp.sid] = tmp;
+                switch (tmp.statement.type) {
+                    case 'flow':
+                        currentLayoutFlow = layoutsFlow.add(currentLayoutFlow, commandDefinition.layout);
+                        tmp.layout = currentLayoutFlow;
+                        currentLayoutFlow.commands[tmp.sid] = tmp;
+                        break;
+                    case 'model':
+                        currentLayoutModel = layoutsModel.add(currentLayoutModel, commandDefinition.layout);
+                        tmp.layout = currentLayoutModel;
+                        currentLayoutModel.commands[tmp.sid] = tmp;
+                        break;
+                    default:
+                        throw 'Unsupported statement type';
+                }
+
                 currentCommandsList.push(tmp.sid);
             }
 
@@ -240,22 +261,46 @@ function processOperators(index, definitions, openCommands, commands, layoutsLis
 
     for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) {
         currentCommandsList.push(openCommands[openCommandsIndex].sid);
+        switch (commands[openCommands[openCommandsIndex].sid].statement.type) {
+            case 'flow':
+                currentLayoutFlow = commands[openCommands[openCommandsIndex].sid].layout;
+                break;
+            case 'model':
+                currentLayoutModel = commands[openCommands[openCommandsIndex].sid].layout;
+                break;
+            default:
+                throw 'Unsupported statement type';
+        }
     }
 
-    if (openCommands.length)
-        currentLayout = commands[openCommands[openCommands.length - 1].sid].layout;
-
     for (; definitionsIndex < definitionsLen; ++definitionsIndex) {
-        currentLayout = layoutsList.add(currentLayout, false);
         tmp = definitions[definitionsIndex].command;
-        tmp.layout = currentLayout;
-        currentLayout.commands[tmp.sid] = tmp;
+        switch (tmp.statement.type) {
+            case 'flow':
+                currentLayoutFlow = layoutsFlow.add(currentLayoutFlow, false);
+                tmp.layout = currentLayoutFlow;
+                currentLayoutFlow.commands[tmp.sid] = tmp;
+                break;
+            case 'model':
+                currentLayoutModel = layoutsModel.add(currentLayoutModel, false);
+                tmp.layout = currentLayoutModel;
+                currentLayoutModel.commands[tmp.sid] = tmp;
+                break;
+            default:
+                throw 'Unsupported statement type';
+        }
+
         currentCommandsList.push(tmp.sid);
     }
 
     for (i = 1, iLen = currentCommandsList.length; i < iLen; ++i) {
         for (j = i - 1; j >= 0; --j) {
-            commands[currentCommandsList[j]].depends[currentCommandsList[i]] = true;
+            if (commands[currentCommandsList[j]].statement.type ==
+                commands[currentCommandsList[i]].statement.type)
+                commands[currentCommandsList[j]].depends[currentCommandsList[i]] = true;
+
+            if (commands[currentCommandsList[j]].statement.definition.isDefineReferences)
+                commands[currentCommandsList[i]].synonyms.push(currentCommandsList[j]);
         }
     }
 
@@ -292,7 +337,8 @@ function parsePlate(listElement, newList) {
             plateLevel: listElement.plateLevel,
             path: listElement.path,
             plates: [],
-            layouts: new CLayoutsList(),
+            layoutsFlow: new CLayoutsList(),
+            layoutsModel: new CLayoutsList(),
             commands: {}
         }, needMarker;
 
@@ -320,7 +366,8 @@ function parsePlate(listElement, newList) {
         if (!definitions.length)
             continue;
 
-        needMarker = processOperators(j, definitions, openCommands, plate.commands, plate.layouts);
+        needMarker = processOperators(j, definitions, openCommands, plate.commands,
+            plate.layoutsFlow, plate.layoutsModel);
 
         //can throws exception for document or documentElement nodes
         //todo: check that marker can be added
@@ -384,7 +431,7 @@ function parse(domRoot) {
         for (i = 0, iLen = list.length; i < iLen; ++i) {
             plate = parsePlate(list[i], newList);
 
-            if (!plate.layouts.layoutFirst)
+            if (!plate.layoutsFlow.layoutFirst && !plate.layoutsModel.layoutFirst)
                 continue;
 
             plate.template = list[i].parent;
