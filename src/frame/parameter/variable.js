@@ -56,9 +56,9 @@ FR.register.parameter('variable', {
             dependsOn: isVariable ? [value] : []
         };
     },
-    render: function(parsedParameters, root) {
+    render: function(parsedParameters, access) {
         return parsedParameters.isVariable
-            ? app.common.object.getValueFromPath(root, parsedParameters.value)
+            ? access.get(parsedParameters.value)
             : parsedParameters.value;
     }
 });

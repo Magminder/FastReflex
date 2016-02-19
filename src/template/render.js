@@ -2,14 +2,58 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-function CTransformation() {
-    //this.transformations =
-};
-CTransformation.prototype.add = function(indexStart, indexEnd, transformation) {
+function CTransformation(access) {
+    this.access = access;
+    this.clear();
+}
+CTransformation.prototype.add = function(indexStart, indexEnd, command) {
+    var localList = [], i, j, jLen;
+    for (i = indexStart; i <= indexEnd; ++i) {
+        if (this.map.hasOwnProperty(i)) {
+            for (j = 0, jLen = this.map[i].length; j < jLen; ++j) {
+                localList[this.map[i][j]] = i;
+            }
+        } else {
+            localList[i] = i;
+        }
+    }
+
+    var parameters = command.parameter.definition.render(command.operand, this.access),
+        localListKeys = Object.keys(localList);
+    /**
+     * response from flow:
+     * [1, 2, 3] => [3, 2, 1]
+     * or
+     * [1, 2, 3] => [[1, 2, 3], [3, 2, 1], [1, 2, 3]]
+     *
+     * response from flow with synonyms:
+     * [1, 2, 3] => [
+     *  {index: 3, synonyms: {test: root.test.1, big: root.big}}
+     *  {index: 2, synonyms: {test: root.test.2, small: root.small}}
+     * ] (mb without some element, 3rh in that case)
+     * or
+     * the same as above, but in nested arrays
+     *
+     * information saved as:
+     * this.map: [
+     *  5: [7, 9, 11],
+     *  6: [8, 10, 12],
+     *  7: [21, 25]
+     * ]
+     *
+     * this.list: [
+     *  7: {index: 5, synonyms: {test: root.test.1, big: root.big}},
+     *  8: {index: 6, synonyms: {test: root.test.2, small: root.small}}
+     * ]
+     */
 
 };
 CTransformation.prototype.get = function(index) {
 
+};
+CTransformation.prototype.clear = function() {
+    this.map = {};
+    this.list = [];
 };
 
 function initFlowStatement(domParent, command) {
@@ -65,6 +109,8 @@ function applyModelStatement(domParent, command, access) {
 function init(domParent, plate, access) {
     var i, layout;
 
+    plate.transformation = new CTransformation(access);
+
     for (i in plate.commands) {
         if (!plate.commands.hasOwnProperty(i)) continue;
 
@@ -76,7 +122,7 @@ function init(domParent, plate, access) {
         for (i in layout.commands) {
             if (!layout.commands.hasOwnProperty(i)) continue;
 
-            applyFlowStatement(domParent, layout.commands[i], access);
+            applyFlowStatement(domParent, layout.commands[i], plate.transformation);
         }
 
         layout = layout.next;
@@ -87,7 +133,7 @@ function init(domParent, plate, access) {
         for (i in layout.commands) {
             if (!layout.commands.hasOwnProperty(i)) continue;
 
-            applyModelStatement(domParent, layout.commands[i], access);
+            applyModelStatement(domParent, layout.commands[i], plate.transformation, access);
         }
 
         layout = layout.next;

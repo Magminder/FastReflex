@@ -38,11 +38,11 @@ FR.register.parameter('list', {
             dependsOn: dependsOn
         };
     },
-    render: function(dependParameters, root) {
+    render: function(dependParameters, access) {
         var values = dependParameters.values.slice(), i, iLen;
 
         for (i = 0, iLen = dependParameters.variables.length; i < iLen; ++i) {
-            values[dependParameters.variables[i]] = app.common.object.getValueFromPath(root, values[dependParameters.variables[i]]);
+            values[dependParameters.variables[i]] = access.get(values[dependParameters.variables[i]]);
         }
 
         return values;
