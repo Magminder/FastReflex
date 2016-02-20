@@ -8,9 +8,9 @@ function CTransformation(access, length) {
     this.clear();
 }
 
-CTransformation.prototype.add = function(indexStart, indexEnd, command) {
-    var localList = [], i, j, jLen;
-    for (i = indexStart; i <= indexEnd; ++i) {
+CTransformation.prototype.add = function(command) {
+    var localList = [], i, iEnd, j, jLen;
+    for (i = command.indexStart, iEnd = command.indexEnd ? command.indexEnd : command.indexStart; i <= iEnd; ++i) {
         for (j = 0, jLen = this.map[i].length; j < jLen; ++j) {
             localList[this.map[i][j]] = true;
         }
@@ -90,10 +90,17 @@ CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, op
             }
         } else {
             if (transformation[i] instanceof Object) {
-                newListSequence.push(this._extend(transformation[i].index,
-                    transformation[i].synonyms));
+                if (transformation[i].index instanceof Array) {
+                    for (q = 0, qLen = transformation[i].index.length; q < qLen; ++q) {
+                        newListSequence.push(this._extend(transformation[i].index[q],
+                            transformation[i].synonyms));
+                    }
+                } else {
+                    newListSequence.push(this._extend(transformation[i].index,
+                        transformation[i].synonyms));
+                }
             } else {
-                newListSequence.push(transformation[i], {});
+                newListSequence.push(this._extend(transformation[i], {}));
             }
         }
     }
@@ -114,7 +121,7 @@ CTransformation.prototype._remap = function() {
 };
 
 CTransformation.prototype.get = function(index) {
-
+    return this.map[index];
 };
 
 CTransformation.prototype.clear = function() {
@@ -140,13 +147,6 @@ CTransformation.prototype.clear = function() {
     }
 };
 
-function initFlowStatement(domParent, command) {
-    command.flow = [{}];
-    command.synonyms = {};
-    if (command.statement.definition.init)
-        command.statement.definition.init(command);
-}
-
 function initModelStatement(domParent, command) {
     var checkers = command.statement.definition.changes instanceof Array
         ? command.statement.definition.changes
@@ -169,36 +169,24 @@ function initModelStatement(domParent, command) {
     }
 }
 
-function initCommand(domParent, command) {
-    switch (command.statement.type) {
-        case 'flow':
-            initFlowStatement(domParent, command);
-            break;
-        case 'model':
-            initModelStatement(domParent, command);
-            break;
-        default:
-            throw 'Unsupported statement type';
-    }
-}
-
-function applyFlowStatement(domParent, command, access) {
-
-}
-
 function applyModelStatement(domParent, command, access) {
 
 }
 
 function init(domParent, plate, access) {
-    var i, layout;
+    var i, layout, command;
 
-    plate.transformation = new CTransformation(access);
+    plate.transformation = new CTransformation(access, domParent.childNodes.length);
 
-    for (i in plate.commands) {
-        if (!plate.commands.hasOwnProperty(i)) continue;
+    layout = plate.layoutsModel.layoutFirst;
+    while (layout) {
+        for (i in layout.commands) {
+            if (!layout.commands.hasOwnProperty(i)) continue;
 
-        initCommand(domParent, plate.commands[i]);
+            initModelStatement(domParent, layout.commands[i]);
+        }
+
+        layout = layout.next;
     }
 
     layout = plate.layoutsFlow.layoutFirst;
@@ -206,11 +194,17 @@ function init(domParent, plate, access) {
         for (i in layout.commands) {
             if (!layout.commands.hasOwnProperty(i)) continue;
 
-            applyFlowStatement(domParent, layout.commands[i], plate.transformation);
+            command = layout.commands[i];
+
+            plate.transformation.add(command);
         }
 
         layout = layout.next;
     }
+
+    //todo: implement diff between old and new transformation
+    //var oldTransformation = new CTransformation(access, domParent.childNodes.length);
+    //var newItems = plate.transformation.apply(oldTransformation, domParent);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
