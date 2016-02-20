@@ -21,11 +21,11 @@ CTransformation.prototype.add = function(indexStart, indexEnd, command) {
         lastSequenceIndex = localListKeys[localListKeys.length - 1];
     for (i = localListKeys.length - 2; i >= 0; --i) {
         if (localListKeys[i] != localListKeys[i + 1] - 1) {
-            this._apply(i + 1, lastSequenceIndex, parameters, command.statement.definition.apply);
+            this._apply(i + 1, lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
             lastSequenceIndex = localListKeys[i];
         }
     }
-    this._apply(0, lastSequenceIndex, parameters, command.statement.definition.apply);
+    this._apply(0, lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
 
     this._remap();
 };
@@ -47,7 +47,7 @@ CTransformation.prototype._extend = function(index, synonyms) {
         synonyms: newSynonyms
     };
 };
-CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, apply) {
+CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, operand, apply) {
     var sequence = [], newListSequence = [indexStart, indexEnd - indexStart + 1],
         i, iLen, j, jLen, q, qLen, transformation;
     for (i = indexStart; i <= indexEnd; ++i) {
@@ -70,7 +70,7 @@ CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, ap
      *  {index: [3, 2, 1], synonyms: {test: root.test.2, small: root.small}}
      * ]
      */
-    transformation = apply(parameters, sequence);
+    transformation = apply(parameters, operand, sequence);
     for (i = 0, iLen = transformation.length; i < iLen; ++i) {
         if (transformation[i] instanceof Array) {
             for (j = 0, jLen = transformation[i].length; j < jLen; ++j) {

@@ -6,7 +6,15 @@ FR.register.flow('use', {
     parameters: 'use',
     isDefineReferences: true,
     isChangeFlow: false,
-    apply: function(parameters, sequence) {
-        //todo: implement for flow
+    apply: function(parameters, operand, sequence) {
+        var synonyms = {};
+        synonyms[operand.mapValue] = operand.value;
+        if (operand.isKey) {
+            synonyms[operand.mapKey] = operand.value;
+        }
+        return [{
+            index: sequence,
+            synonyms: synonyms
+        }];
     }
 });
