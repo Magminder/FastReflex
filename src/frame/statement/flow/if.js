@@ -4,7 +4,7 @@
 
 FR.register.flow('if', {
     parameters: 'variable',
-    apply: function(parameters) {
+    apply: function(parameters, sequence) {
         //todo: implement if flow
     }
 });

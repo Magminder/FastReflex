@@ -2,24 +2,57 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-function CTransformation(access) {
+function CTransformation(access, length) {
     this.access = access;
+    this.length = length;
     this.clear();
 }
+
 CTransformation.prototype.add = function(indexStart, indexEnd, command) {
     var localList = [], i, j, jLen;
     for (i = indexStart; i <= indexEnd; ++i) {
-        if (this.map.hasOwnProperty(i)) {
-            for (j = 0, jLen = this.map[i].length; j < jLen; ++j) {
-                localList[this.map[i][j]] = i;
-            }
-        } else {
-            localList[i] = i;
+        for (j = 0, jLen = this.map[i].length; j < jLen; ++j) {
+            localList[this.map[i][j]] = true;
         }
     }
 
     var parameters = command.parameter.definition.render(command.operand, this.access),
-        localListKeys = Object.keys(localList);
+        localListKeys = Object.keys(localList),
+        lastSequenceIndex = localListKeys[localListKeys.length - 1];
+    for (i = localListKeys.length - 2; i >= 0; --i) {
+        if (localListKeys[i] != localListKeys[i + 1] - 1) {
+            this._apply(i + 1, lastSequenceIndex, parameters, command.statement.definition.apply);
+            lastSequenceIndex = localListKeys[i];
+        }
+    }
+    this._apply(0, lastSequenceIndex, parameters, command.statement.definition.apply);
+
+    this._remap();
+};
+CTransformation.prototype._extend = function(index, synonyms) {
+    var newSynonyms = {}, listElement = this.list[index], i;
+    for (i in listElement.synonyms) {
+        if (!listElement.synonyms.hasOwnProperty(i))
+            continue;
+
+        newSynonyms[i] = listElement.synonyms[i];
+    }
+    for (i in synonyms) {
+        if (!synonyms.hasOwnProperty(i))
+            continue;
+        newSynonyms[i] = synonyms[i];
+    }
+    return {
+        index: this.list[index].index,
+        synonyms: newSynonyms
+    };
+};
+CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, apply) {
+    var sequence = [], newListSequence = [indexStart, indexEnd - indexStart + 1],
+        i, iLen, j, jLen, q, qLen, transformation;
+    for (i = indexStart; i <= indexEnd; ++i) {
+        sequence.push(i);
+    }
     /**
      * response from flow:
      * [1, 2, 3] => [3, 2, 1]
@@ -28,32 +61,83 @@ CTransformation.prototype.add = function(indexStart, indexEnd, command) {
      *
      * response from flow with synonyms:
      * [1, 2, 3] => [
-     *  {index: 3, synonyms: {test: root.test.1, big: root.big}}
+     *  {index: 3, synonyms: {test: root.test.1, big: root.big}},
      *  {index: 2, synonyms: {test: root.test.2, small: root.small}}
      * ] (mb without some element, 3rh in that case)
      * or
-     * the same as above, but in nested arrays
-     *
-     * information saved as:
-     * this.map: [
-     *  5: [7, 9, 11],
-     *  6: [8, 10, 12],
-     *  7: [21, 25]
-     * ]
-     *
-     * this.list: [
-     *  7: {index: 5, synonyms: {test: root.test.1, big: root.big}},
-     *  8: {index: 6, synonyms: {test: root.test.2, small: root.small}}
+     * [1, 2, 3] => [
+     *  {index: [1, 2, 3], synonyms: {test: root.test.1, big: root.big}},
+     *  {index: [3, 2, 1], synonyms: {test: root.test.2, small: root.small}}
      * ]
      */
-
+    transformation = apply(parameters, sequence);
+    for (i = 0, iLen = transformation.length; i < iLen; ++i) {
+        if (transformation[i] instanceof Array) {
+            for (j = 0, jLen = transformation[i].length; j < jLen; ++j) {
+                if (transformation[i][j] instanceof Object) {
+                    if (transformation[i][j].index instanceof Array) {
+                        for (q = 0, qLen = transformation[i][j].index.length; q < qLen; ++q) {
+                            newListSequence.push(this._extend(transformation[i][j].index[q],
+                                transformation[i][j].synonyms));
+                        }
+                    } else {
+                        newListSequence.push(this._extend(transformation[i][j].index,
+                            transformation[i][j].synonyms));
+                    }
+                } else {
+                    newListSequence.push(transformation[i][j], {});
+                }
+            }
+        } else {
+            if (transformation[i] instanceof Object) {
+                newListSequence.push(this._extend(transformation[i].index,
+                    transformation[i].synonyms));
+            } else {
+                newListSequence.push(transformation[i], {});
+            }
+        }
+    }
+    Array.prototype.splice.apply(this.list, newListSequence);
 };
+
+CTransformation.prototype._remap = function() {
+    this.map = [];
+
+    var i, iLen;
+
+    for (i = 0; i < this.length; ++i) {
+        this.map[i] = [];
+    }
+    for (i = 0, iLen = this.list.length; i < iLen; ++i) {
+        this.map[this.list[i].index].push(i);
+    }
+};
+
 CTransformation.prototype.get = function(index) {
 
 };
+
 CTransformation.prototype.clear = function() {
-    this.map = {};
+   /**
+    * information saved as:
+    * this.map: [
+    *  5: [7, 9, 11],
+    *  6: [8, 10, 12],
+    *  7: [21, 25]
+    * ]
+    *
+    * this.list: [
+    *  7: {index: 5, synonyms: {test: root.test.1, big: root.big}},
+    *  8: {index: 6, synonyms: {test: root.test.2, small: root.small}}
+    * ]
+    */
+    this.map = [];
     this.list = [];
+
+    for (var i = 0; i < this.length; ++i) {
+        this.map[i] = [i];
+        this.list[i] = {index: i, synonyms: {}};
+    }
 };
 
 function initFlowStatement(domParent, command) {
