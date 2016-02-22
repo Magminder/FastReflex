@@ -140,11 +140,96 @@ CTransformation.prototype.clear = function() {
     */
     this.map = [];
     this.list = [];
+    this.hashMap = {};
 
     for (var i = 0; i < this.length; ++i) {
         this.map[i] = [i];
-        this.list[i] = {index: i, synonyms: {}};
+        this.list[i] = {index: i, synonyms: {}, hash: i + '|'};
+        this.hashMap[i + '|'] = [i];
     }
+};
+
+CTransformation.prototype._updateHash = function() {
+    var i, iLen, j, listItem;
+
+    this.hashMap = {};
+    for (i = 0, iLen = this.list.length; i < iLen; ++i) {
+        listItem = this.list[i];
+        listItem.hash = listItem.index + '|';
+        for (j in listItem.synonyms) {
+            if (!listItem.synonyms.hasOwnProperty(j))
+                continue;
+            listItem.hash += j + ':' + listItem.synonyms[j] + '|';
+        }
+        if (!this.hashMap.hasOwnProperty(listItem.hash))
+            this.hashMap[listItem.hash] = {};
+        this.hashMap[listItem.hash][i] = true;
+    }
+};
+
+CTransformation.prototype.applyChanges = function(domParent, template, oldTransformation) {
+    this._updateHash();
+
+    var i, iLen, j, jLen, listItem, hashIndex, oldMap, newElement, added = [], changed = [], removed = [];
+    for (i = 0, iLen = oldTransformation.list.length; i < iLen; ++i) {
+        oldTransformation.list[i].domElement = domParent.childNodes[i];
+    }
+
+    listLoop:
+    for (i = 0, iLen = this.list.length; i < iLen; ++i) {
+        listItem = this.list[i];
+        if (oldTransformation.hashMap[listItem.hash] && oldTransformation.hashMap[listItem.hash][i]) {
+            //dom element in needed place
+            delete oldTransformation.hashMap[listItem.hash][i];
+            continue;
+        }
+
+        for (hashIndex in oldTransformation.hashMap[listItem.hash]) {
+            if (!oldTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex))
+                continue;
+            if (!this.hashMap[listItem.hash][hashIndex]) {
+                //dom element (copy of current) not used in same place in new list, it can be moved
+                delete oldTransformation.hashMap[listItem.hash][hashIndex];
+                domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
+                continue listLoop;
+            }
+        }
+
+        //find element with the same structure, but not needed in new list. We need to update it then
+        oldMap = oldTransformation.map[listItem.index];
+        for (j = 0, jLen = oldMap.length; j < jLen; ++j) {
+            hashIndex = oldMap[j];
+            if (!this.hashMap[oldTransformation.list[hashIndex].hash]) {
+                //use element only if that hash fully not uses, do not risky
+                delete oldTransformation.hashMap[oldTransformation.list[hashIndex].hash][hashIndex];
+                domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
+                changed.push(i);
+                continue listLoop;
+            }
+        }
+
+        //need to add new element from template
+        newElement = template.childNodes[listItem.index].cloneNode(true);
+        domParent.insertBefore(newElement, domParent.childNodes[i]);
+        added.push(i);
+    }
+
+    for (i in oldTransformation.hashMap) {
+        if (!oldTransformation.hashMap.hasOwnProperty(i))
+            continue;
+        for (hashIndex in oldTransformation.hashMap[i]) {
+            if (!oldTransformation.hashMap[i].hasOwnProperty(hashIndex))
+                continue;
+            domParent.removeChild(oldTransformation.list[hashIndex].domElement);
+            removed.push(oldTransformation.list[hashIndex]);
+        }
+    }
+
+    return {
+        added: added,
+        changed: changed,
+        removed: removed
+    };
 };
 
 function initModelStatement(domParent, command) {
