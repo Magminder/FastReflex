@@ -136,9 +136,11 @@ function parseDefinition(domObject) {
 function processOperators(index, definitions, openCommands, commands, layoutsFlow, layoutsModel) {
     var currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
         isBegin, isEnd, isSingle, commandDefinition, tmp, i, iLen,
-        openCommandsIndex = 0, openCommandsLen = openCommands.length, sid,
-        definitionsIndex = 0, definitionsLen = definitions.length,
-        currentLayoutFlow = false, currentLayoutModel = false, j, jLen, needMarker = false;
+        openCommandsIndex = 0, openCommandsLen = openCommands.length, sid, type,
+        definitionsLen = definitions.length, j, jLen, needMarker = false,
+        layouts = {flow: layoutsFlow, model: layoutsModel},
+        definitionsIndex = {flow: 0, model: 0},
+        currentLayout = {flow: false, model: false};
 
     for (i = 0; i < definitionsLen; ++i) {
         isSingle = !definitions[i].modifier;
@@ -187,6 +189,7 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
             }
         } else { //command was begun previously
             sid = false;
+
             for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) { //find suitable opened (begin) statement for current command
                 if (openCommands[openCommandsIndex].operator == definitions[i].operator &&
                     openCommands[openCommandsIndex].uid == definitions[i].uid) {
@@ -194,38 +197,24 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
                     break;
                 }
                 currentCommandsList.push(openCommands[openCommandsIndex].sid);
-                switch (commands[openCommands[openCommandsIndex].sid].statement.type) {
-                    case 'flow':
-                        currentLayoutFlow = commands[openCommands[openCommandsIndex].sid].layout;
-                        break;
-                    case 'model':
-                        currentLayoutModel = commands[openCommands[openCommandsIndex].sid].layout;
-                        break;
-                    default:
-                        throw 'Unsupported statement type';
-                }
+                type = commands[openCommands[openCommandsIndex].sid].statement.type;
+                currentLayout[type] = commands[openCommands[openCommandsIndex].sid].layout;
             }
             if (!sid)
                 throw 'There is no begin statement for "' + definitions[i].commandString + '" or collision detected';
 
             commandDefinition = commands[sid];
+            definitions[i].command = commandDefinition;
+            type = commandDefinition.statement.type;
 
-            for (; definitionsIndex < i; ++definitionsIndex) {
-                tmp = definitions[definitionsIndex].command;
-                switch (tmp.statement.type) {
-                    case 'flow':
-                        currentLayoutFlow = layoutsFlow.add(currentLayoutFlow, commandDefinition.layout);
-                        tmp.layout = currentLayoutFlow;
-                        currentLayoutFlow.commands[tmp.sid] = tmp;
-                        break;
-                    case 'model':
-                        currentLayoutModel = layoutsModel.add(currentLayoutModel, commandDefinition.layout);
-                        tmp.layout = currentLayoutModel;
-                        currentLayoutModel.commands[tmp.sid] = tmp;
-                        break;
-                    default:
-                        throw 'Unsupported statement type';
-                }
+            for (; definitionsIndex[type] < i; ++definitionsIndex[type]) {
+                tmp = definitions[definitionsIndex[type]].command;
+                if (tmp.statement.type != type)
+                    continue;
+
+                currentLayout[type] = layouts[type].add(currentLayout[type], commandDefinition.layout);
+                tmp.layout = currentLayout[type];
+                currentLayout[type].commands[tmp.sid] = tmp;
 
                 currentCommandsList.push(tmp.sid);
             }
@@ -241,7 +230,7 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
                 ++openCommandsIndex;
             }
 
-            ++definitionsIndex;
+            ++definitionsIndex[type];
 
             if (isEnd) {
                 commandDefinition.indexEnd = index;
@@ -261,34 +250,24 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
 
     for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) {
         currentCommandsList.push(openCommands[openCommandsIndex].sid);
-        switch (commands[openCommands[openCommandsIndex].sid].statement.type) {
-            case 'flow':
-                currentLayoutFlow = commands[openCommands[openCommandsIndex].sid].layout;
-                break;
-            case 'model':
-                currentLayoutModel = commands[openCommands[openCommandsIndex].sid].layout;
-                break;
-            default:
-                throw 'Unsupported statement type';
-        }
+        type = commands[openCommands[openCommandsIndex].sid].statement.type;
+        currentLayout[type] = commands[openCommands[openCommandsIndex].sid].layout;
     }
 
-    for (; definitionsIndex < definitionsLen; ++definitionsIndex) {
-        tmp = definitions[definitionsIndex].command;
-        switch (tmp.statement.type) {
-            case 'flow':
-                currentLayoutFlow = layoutsFlow.add(currentLayoutFlow, false);
-                tmp.layout = currentLayoutFlow;
-                currentLayoutFlow.commands[tmp.sid] = tmp;
-                break;
-            case 'model':
-                currentLayoutModel = layoutsModel.add(currentLayoutModel, false);
-                tmp.layout = currentLayoutModel;
-                currentLayoutModel.commands[tmp.sid] = tmp;
-                break;
-            default:
-                throw 'Unsupported statement type';
-        }
+    for (; definitionsIndex.flow < definitionsLen; ++definitionsIndex.flow) {
+        tmp = definitions[definitionsIndex.flow].command;
+        currentLayout.flow = layouts.flow.add(currentLayout.flow, false);
+        tmp.layout = currentLayout.flow;
+        currentLayout.flow.commands[tmp.sid] = tmp;
+
+        currentCommandsList.push(tmp.sid);
+    }
+
+    for (; definitionsIndex.model < definitionsLen; ++definitionsIndex.model) {
+        tmp = definitions[definitionsIndex.model].command;
+        currentLayout.model = layouts.model.add(currentLayout.model, false);
+        tmp.layout = currentLayout.model;
+        currentLayout.model.commands[tmp.sid] = tmp;
 
         currentCommandsList.push(tmp.sid);
     }
