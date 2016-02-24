@@ -249,13 +249,17 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
     }
 
     for (; openCommandsIndex < openCommandsLen; ++openCommandsIndex) {
-        currentCommandsList.push(openCommands[openCommandsIndex].sid);
-        type = commands[openCommands[openCommandsIndex].sid].statement.type;
-        currentLayout[type] = commands[openCommands[openCommandsIndex].sid].layout;
+        tmp = openCommands[openCommandsIndex];
+        commandDefinition = commands[tmp.sid];
+        currentCommandsList.push(tmp.sid);
+        type = commandDefinition.statement.type;
+        currentLayout[type] = commandDefinition.layout;
     }
 
     for (; definitionsIndex.flow < definitionsLen; ++definitionsIndex.flow) {
         tmp = definitions[definitionsIndex.flow].command;
+        if (tmp.statement.type != 'flow')
+            continue;
         currentLayout.flow = layouts.flow.add(currentLayout.flow, false);
         tmp.layout = currentLayout.flow;
         currentLayout.flow.commands[tmp.sid] = tmp;
@@ -265,6 +269,8 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
 
     for (; definitionsIndex.model < definitionsLen; ++definitionsIndex.model) {
         tmp = definitions[definitionsIndex.model].command;
+        if (tmp.statement.type != 'model')
+            continue;
         currentLayout.model = layouts.model.add(currentLayout.model, false);
         tmp.layout = currentLayout.model;
         currentLayout.model.commands[tmp.sid] = tmp;
@@ -273,13 +279,16 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
     }
 
     for (i = 1, iLen = currentCommandsList.length; i < iLen; ++i) {
-        for (j = i - 1; j >= 0; --j) {
-            if (commands[currentCommandsList[j]].statement.type ==
-                commands[currentCommandsList[i]].statement.type)
-                commands[currentCommandsList[j]].depends[currentCommandsList[i]] = true;
+        commandDefinition = commands[currentCommandsList[i]];
 
-            if (commands[currentCommandsList[j]].statement.definition.isDefineReferences)
-                commands[currentCommandsList[i]].synonyms.push(currentCommandsList[j]);
+        for (j = i - 1; j >= 0; --j) {
+            tmp = commands[currentCommandsList[j]];
+
+            if (tmp.statement.type == commandDefinition.statement.type)
+                tmp.depends[currentCommandsList[i]] = true;
+
+            if (tmp.statement.definition.isDefineReferences)
+                commandDefinition.synonyms.push(currentCommandsList[j]);
         }
     }
 

@@ -18,14 +18,17 @@ CTransformation.prototype.add = function(command) {
 
     var parameters = command.parameter.definition.render(command.operand, this.access),
         localListKeys = Object.keys(localList),
-        lastSequenceIndex = localListKeys[localListKeys.length - 1];
+        lastSequenceIndex =
+            localListKeys[localListKeys.length - 1] =
+                Number(localListKeys[localListKeys.length - 1]);
     for (i = localListKeys.length - 2; i >= 0; --i) {
+        localListKeys[i] = Number(localListKeys[i]);
         if (localListKeys[i] != localListKeys[i + 1] - 1) {
-            this._apply(i + 1, lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
+            this._apply(localListKeys[i + 1], lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
             lastSequenceIndex = localListKeys[i];
         }
     }
-    this._apply(0, lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
+    this._apply(localListKeys[0], lastSequenceIndex, parameters, command.operand, command.statement.definition.apply);
 
     this._remap();
 };
@@ -141,11 +144,15 @@ CTransformation.prototype.clear = function() {
     this.map = [];
     this.list = [];
     this.hashMap = {};
+    var hashObject;
 
     for (var i = 0; i < this.length; ++i) {
         this.map[i] = [i];
         this.list[i] = {index: i, synonyms: {}, hash: i + '|'};
-        this.hashMap[i + '|'] = [i];
+        
+        hashObject = {};
+        hashObject[i] = true;
+        this.hashMap[i + '|'] = hashObject;
     }
 };
 
@@ -170,7 +177,7 @@ CTransformation.prototype._updateHash = function() {
 CTransformation.prototype.applyChanges = function(domParent, template, oldTransformation) {
     this._updateHash();
 
-    var i, iLen, j, jLen, listItem, hashIndex, oldMap, newElement, added = [], changed = [], removed = [];
+    var i, iLen, j, jLen, listItem, hashIndex, hashValue, oldMap, newElement, added = [], changed = [], removed = [];
     for (i = 0, iLen = oldTransformation.list.length; i < iLen; ++i) {
         oldTransformation.list[i].domElement = domParent.childNodes[i];
     }
@@ -178,7 +185,7 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
     listLoop:
     for (i = 0, iLen = this.list.length; i < iLen; ++i) {
         listItem = this.list[i];
-        if (oldTransformation.hashMap[listItem.hash] && oldTransformation.hashMap[listItem.hash][i]) {
+        if (oldTransformation.hashMap[listItem.hash] && oldTransformation.hashMap[listItem.hash].hasOwnProperty(i)) {
             //dom element in needed place
             delete oldTransformation.hashMap[listItem.hash][i];
             continue;
@@ -187,7 +194,7 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
         for (hashIndex in oldTransformation.hashMap[listItem.hash]) {
             if (!oldTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex))
                 continue;
-            if (!this.hashMap[listItem.hash][hashIndex]) {
+            if (!this.hashMap[listItem.hash].hasOwnProperty(hashIndex)) {
                 //dom element (copy of current) not used in same place in new list, it can be moved
                 delete oldTransformation.hashMap[listItem.hash][hashIndex];
                 domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
@@ -199,10 +206,15 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
         oldMap = oldTransformation.map[listItem.index];
         for (j = 0, jLen = oldMap.length; j < jLen; ++j) {
             hashIndex = oldMap[j];
+            hashValue = oldTransformation.list[hashIndex].hash;
+            //we already used that element
+            if (!oldTransformation.hashMap[hashValue].hasOwnProperty(hashIndex))
+                continue;
             if (!this.hashMap[oldTransformation.list[hashIndex].hash]) {
                 //use element only if that hash fully not uses, do not risky
                 delete oldTransformation.hashMap[oldTransformation.list[hashIndex].hash][hashIndex];
-                domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
+                if (!i || domParent.childNodes[i - 1] != oldTransformation.list[hashIndex].domElement)
+                    domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
                 changed.push(i);
                 continue listLoop;
             }
@@ -288,8 +300,8 @@ function init(domParent, plate, access) {
     }
 
     //todo: implement diff between old and new transformation
-    //var oldTransformation = new CTransformation(access, domParent.childNodes.length);
-    //var newItems = plate.transformation.apply(oldTransformation, domParent);
+    var oldTransformation = new CTransformation(access, domParent.childNodes.length);
+    var changes = plate.transformation.applyChanges(domParent, plate.template, oldTransformation);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
