@@ -299,9 +299,8 @@ function init(domParent, plate, access) {
         layout = layout.next;
     }
 
-    //todo: implement diff between old and new transformation
     var oldTransformation = new CTransformation(access, domParent.childNodes.length);
-    var changes = plate.transformation.applyChanges(domParent, plate.template, oldTransformation);
+    plate.transformation.applyChanges(domParent, plate.template, oldTransformation);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
@@ -344,16 +343,35 @@ function setValue(object, key, path, value) {
     app.common.object.setValueForPath(object[key], path, value);
 }
 
+function runInit() {
+    //todo: impletent init processing with adding child plates with transformations
+    /**
+     plate = platesObject.plates[plateIndex][i];
+     plateRoot = getElementByPath(child, plate.path);
+     init(plateRoot, plate, access);
+
+     platesList.push({
+        domElement: plateRoot,
+        plates: plate.plates,
+        transformation: plate.transformation
+     });
+     */
+}
+
 module = function(domRoot, parsedRoot, object, key) {
-    var plates = parsedRoot.plates;
-    var access = {
-        get: function(path) {
-            return getValue(object, key, path);
-        },
-        set: function(path, value) {
-            setValue(object, key, path, value);
-        }
-    };
+    var platesList = [{
+            domElement: domRoot,
+            plates: parsedRoot.plates,
+            transformation: new CTransformation(false, domRoot.childNodes.length)
+        }],
+        access = {
+            get: function(path) {
+                return getValue(object, key, path);
+            },
+            set: function(path, value) {
+                setValue(object, key, path, value);
+            }
+        }, platesObject, plateIndex, i, iLen, j, jLen, map, plate, plateRoot, child;
 
     //todo: init dom root statements
 
@@ -361,7 +379,42 @@ module = function(domRoot, parsedRoot, object, key) {
     //todo: every flow can add transformation. need to implement function that will perform
     //todo: translation from init indexes to actual values
 
-    for (var i = 0, iLen = plates.length; i < iLen; ++i) {
-        init(getElementByPath(domRoot, plates[i].path), plates[i], access);
+    while (platesObject = platesList.shift()) {
+        for (plateIndex in platesObject.plates) {
+            if (!platesObject.plates.hasOwnProperty(plateIndex))
+                continue;
+
+            if (plateIndex < 0) {
+                child = platesObject.domElement;
+                for (i = 0, iLen = platesObject.plates[plateIndex].length; i < iLen; ++i) {
+                    plate = platesObject.plates[plateIndex][i];
+                    plateRoot = getElementByPath(child, plate.path);
+                    init(plateRoot, plate, access);
+
+                    platesList.push({
+                        domElement: plateRoot,
+                        plates: plate.plates,
+                        transformation: plate.transformation
+                    });
+                }
+            } else {
+                //todo: recheck this place
+                map = platesObject.transformation.get(plateIndex);
+                for (j = 0, jLen = map.length; j < jLen; ++j) {
+                    child = platesObject.domElement.childNodes[map[j]];
+                    for (i = 0, iLen = platesObject.plates[plateIndex].length; i < iLen; ++i) {
+                        plate = platesObject.plates[plateIndex][i];
+                        plateRoot = getElementByPath(child, plate.path);
+                        init(plateRoot, plate, access);
+
+                        platesList.push({
+                            domElement: plateRoot,
+                            plates: plate.plates,
+                            transformation: plate.transformation
+                        });
+                    }
+                }
+            }
+        }
     }
 };

@@ -376,7 +376,7 @@ function parse(domRoot) {
     if (app.common.object.hasInit(domRoot))
         throw 'Dom object can\'t be used more than once';
 
-    var list, newList, i, iLen, plate,
+    var list, newList, i, iLen, plate, plateIndex,
         openCommands, commandsList, definitions, needMarker;
 
     openCommands = [];
@@ -384,7 +384,7 @@ function parse(domRoot) {
 
     var parsedRoot = {
         template: domRoot.cloneNode(true),
-        plates: []
+        plates: {}
     };
 
     definitions = parseDefinition(parsedRoot.template);
@@ -424,7 +424,10 @@ function parse(domRoot) {
 
             plate.template = list[i].parent;
 
-            list[i].plates.push(plate);
+            plateIndex = plate.path.shift() || -1;
+            if (!list[i].plates.hasOwnProperty(plateIndex))
+                list[i].plates[plateIndex] = [];
+            list[i].plates[plateIndex].push(plate);
         }
         list = newList;
     }

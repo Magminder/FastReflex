@@ -6,6 +6,13 @@
     <script src="lib/lib.js" type="text/javascript"></script>
 </head>
 <body>
+    <table width="100%">
+        <tr data-fr="for: a1 as value1">
+            <td data-fr="for: a1 as value2">V</td>
+        </tr>
+    </table>
+
+
     test<span>444</span>%
 
     <!-- marker test -->
@@ -118,6 +125,12 @@
                 var4: false
             }
         };
+
+        view.data.a1 = [];
+        for (var i = 0; i < 100; ++i) {
+            view.data.a1.push(i);
+        }
+
         FR(document.body, view, 'data');
     </script>
 </body>
