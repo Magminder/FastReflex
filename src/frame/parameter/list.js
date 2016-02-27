@@ -38,11 +38,13 @@ FR.register.parameter('list', {
             dependsOn: dependsOn
         };
     },
-    render: function(dependParameters, access) {
-        var values = dependParameters.values.slice(), i, iLen;
+    render: function(command, access) {
+        var parsedParameters = command.operand;
 
-        for (i = 0, iLen = dependParameters.variables.length; i < iLen; ++i) {
-            values[dependParameters.variables[i]] = access.get(values[dependParameters.variables[i]]);
+        var values = parsedParameters.values.slice(), i, iLen;
+
+        for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
+            values[parsedParameters.variables[i]] = access.get(command, values[parsedParameters.variables[i]]);
         }
 
         return values;

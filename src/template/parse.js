@@ -133,12 +133,13 @@ function parseDefinition(domObject) {
  * @param layoutsModel
  * @returns {boolean}
  */
-function processOperators(index, definitions, openCommands, commands, layoutsFlow, layoutsModel) {
-    var currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
+function processOperators(index, definitions, openCommands, plate) {
+    var commands = plate.commands,
+        currentOpenCommands = [], currentClosedCommands = [], currentCommandsList = [],
         isBegin, isEnd, isSingle, commandDefinition, tmp, i, iLen,
         openCommandsIndex = 0, openCommandsLen = openCommands.length, sid, type,
         definitionsLen = definitions.length, j, jLen, needMarker = false,
-        layouts = {flow: layoutsFlow, model: layoutsModel},
+        layouts = {flow: plate.layoutsFlow, model: plate.layoutsModel},
         definitionsIndex = {flow: 0, model: 0},
         currentLayout = {flow: false, model: false};
 
@@ -166,7 +167,8 @@ function processOperators(index, definitions, openCommands, commands, layoutsFlo
                 indexStart: index,
                 indexEnd: false,
                 depends: {},
-                synonyms: []
+                synonyms: [],
+                plate: plate
             };
             commandDefinition.statement = app.register.get('statement', definitions[i].operator);
             commandDefinition.parameter = app.register.get('parameter',
@@ -324,10 +326,11 @@ function parsePlate(listElement, newList) {
         plate = {
             plateLevel: listElement.plateLevel,
             path: listElement.path,
-            plates: [],
+            plates: {},
             layoutsFlow: new CLayoutsList(),
             layoutsModel: new CLayoutsList(),
-            commands: {}
+            commands: {},
+            parentPlate: listElement.parentPlate
         }, needMarker;
 
     for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
@@ -340,22 +343,23 @@ function parsePlate(listElement, newList) {
                 plateLevel: listElement.plateLevel + 1,
                 path: [j],
                 plates: plate.plates,
-                parent: domElement
+                parent: domElement,
+                parentPlate: plate
             });
         } else {
             newList.push({
                 plateLevel: listElement.plateLevel + 1,
                 path: listElement.path.concat(j),
                 plates: listElement.plates,
-                parent: domElement
+                parent: domElement,
+                parentPlate: listElement.parentPlate
             });
         }
 
         if (!definitions.length)
             continue;
 
-        needMarker = processOperators(j, definitions, openCommands, plate.commands,
-            plate.layoutsFlow, plate.layoutsModel);
+        needMarker = processOperators(j, definitions, openCommands, plate);
 
         //can throws exception for document or documentElement nodes
         //todo: check that marker can be added
@@ -410,7 +414,8 @@ function parse(domRoot) {
         plateLevel: 1,
         path: [],
         plates: parsedRoot.plates,
-        parent: parsedRoot.template
+        parent: parsedRoot.template,
+        parentPlate: parsedRoot
     }];
 
     while (list.length) {
@@ -424,7 +429,8 @@ function parse(domRoot) {
 
             plate.template = list[i].parent;
 
-            plateIndex = plate.path.shift() || -1;
+            plateIndex = plate.path.length ? plate.path.shift() : -1;
+            plate.plateIndex = plateIndex;
             if (!list[i].plates.hasOwnProperty(plateIndex))
                 list[i].plates[plateIndex] = [];
             list[i].plates[plateIndex].push(plate);

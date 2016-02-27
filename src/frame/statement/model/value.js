@@ -4,7 +4,7 @@
 
 FR.register.model('value', {
     changes: 'value',
-    parameters: 'object',
+    parameters: 'variable',
     apply: function(domObject, parameters) {
         var valueChecker = app.register.get('checker', 'value').definition;
         valueChecker.set(domObject, parameters);

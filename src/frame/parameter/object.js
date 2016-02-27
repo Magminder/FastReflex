@@ -48,11 +48,13 @@ FR.register.parameter('object', {
             dependsOn: dependsOn
         };
     },
-    render: function(parsedParameters, access) {
+    render: function(command, access) {
+        var parsedParameters = command.operand;
+
         var values = parsedParameters.values.slice(), i, iLen, result = {};
 
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            values[parsedParameters.variables[i]] = access.get(values[parsedParameters.variables[i]]);
+            values[parsedParameters.variables[i]] = access.get(command, values[parsedParameters.variables[i]]);
         }
 
         for (i = 0, iLen = parsedParameters.keys.length; i < iLen; ++i) {

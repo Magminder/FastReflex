@@ -56,9 +56,10 @@ FR.register.parameter('variable', {
             dependsOn: isVariable ? [value] : []
         };
     },
-    render: function(parsedParameters, access) {
+    render: function(command, access) {
+        var parsedParameters = command.operand;
         return parsedParameters.isVariable
-            ? access.get(parsedParameters.value)
+            ? access.get(command, parsedParameters.value)
             : parsedParameters.value;
     }
 });
