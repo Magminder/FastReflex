@@ -2,9 +2,10 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-function CTransformation(access, length) {
+function CTransformation(plate, access) {
+    this.plate = plate;
     this.access = access;
-    this.length = length;
+    this.length = plate.template.childNodes.length;
     this.clear();
 }
 
@@ -206,6 +207,14 @@ CTransformation.prototype._updateHash = function() {
     }
 };
 
+CTransformation.prototype._copyFromOld = function(newItem, oldItem) {
+    newItem.parentTransformation = this;
+    newItem.children = oldItem.children;
+    for (var i = 0, iLen = newItem.children.length; i < iLen; ++i) {
+        newItem.children[i].parentItem = newItem;
+    }
+};
+
 CTransformation.prototype.applyChanges = function(domParent, template, oldTransformation) {
     this._updateHash();
 
@@ -301,7 +310,7 @@ function initModelStatement(domParent, command) {
 function init(domParent, plate, access) {
     var i, layout, command, commandIndex, commandLastIndex, map, j, jLen, model;
 
-    plate.transformation = new CTransformation(access, domParent.childNodes.length);
+    plate.transformation = new CTransformation(plate, access);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
@@ -327,7 +336,7 @@ function init(domParent, plate, access) {
         layout = layout.next;
     }
 
-    var oldTransformation = new CTransformation(access, domParent.childNodes.length);
+    var oldTransformation = new CTransformation(plate, access);
     plate.transformation.applyChanges(domParent, plate.template, oldTransformation);
 
     layout = plate.layoutsModel.layoutFirst;
