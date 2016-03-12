@@ -2,9 +2,11 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-function CTransformation(plate, access) {
+function CTransformation(plate, access, parentTransformation, parentTransformationItem) {
     this.plate = plate;
     this.access = access;
+    this.parentTransformation = parentTransformation || false;
+    this.parentTransformationItem = parentTransformationItem || false;
     this.length = plate.template.childNodes.length;
     this.clear();
 }
@@ -33,8 +35,8 @@ CTransformation.prototype.add = function(command) {
 
     this._remap();
 };
-CTransformation.prototype._extend = function(index, sid, synonyms) {
-    var newSynonyms = {}, listElement = this.list[index],
+CTransformation.prototype._extend = function(listIndex, sid, synonyms) {
+    var newSynonyms = {}, listElement = this.list[listIndex],
         existsSid, existCommandSynonyms, i,
         newCommandSynonyms;
     for (existsSid in listElement.synonyms) {
@@ -60,14 +62,14 @@ CTransformation.prototype._extend = function(index, sid, synonyms) {
             if (!synonyms.hasOwnProperty(i))
                 continue;
 
-            newCommandSynonyms[i] = synonyms[i];
+            newCommandSynonyms[i] = this._getRealPath(listIndex, sid, synonyms[i]);
         }
 
         newSynonyms[sid] = newCommandSynonyms;
     }
 
     return {
-        index: this.list[index].index,
+        index: this.list[listIndex].index,
         synonyms: newSynonyms
     };
 };
@@ -133,6 +135,55 @@ CTransformation.prototype._apply = function(indexStart, indexEnd, parameters, co
         }
     }
     Array.prototype.splice.apply(this.list, newListSequence);
+};
+CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
+    if (path instanceof Object)
+        return path;
+
+    var command = this.plate.commands[sid],
+        synonyms = this.list[listIndex].synonyms,
+        synonymSid,
+        sidSynonyms,
+        synonymKey,
+        pathPoint = path.indexOf('.'),
+        pathKey = pathPoint < 0 ? path : path.substr(0, pathKey),
+        parentItem, parentTransformation;
+
+    for (synonymSid in command.synonyms) {
+        if (!command.synonyms.hasOwnProperty(synonymSid) ||
+            !synonyms.hasOwnProperty(synonymSid)) continue;
+
+        sidSynonyms = synonyms[synonymSid];
+        for (synonymKey in sidSynonyms) {
+            if (sidSynonyms[synonymKey].hasOwnProperty(pathKey))
+                return sidSynonyms[synonymKey][pathKey];
+        }
+    }
+
+    parentTransformation = this.parentTransformation;
+    parentItem = this.parentTransformationItem;
+    while (parentTransformation && parentItem) {
+        for (synonymSid in parentItem.synonyms) {
+            if (!command.synonyms.hasOwnProperty(synonymSid) ||
+                !synonyms.hasOwnProperty(synonymSid)) continue;
+
+            sidSynonyms = synonyms[synonymSid];
+            for (synonymKey in sidSynonyms) {
+                if (sidSynonyms[synonymKey].hasOwnProperty(pathKey))
+                    return sidSynonyms[synonymKey][pathKey];
+            }
+        }
+
+        parentItem = parentTransformation.parentItem;
+        parentTransformation = parentTransformation.parentTransformation;
+    }
+
+    return path;
+};
+CTransformation.prototype._getValue = function(listIndex, sid, path) {
+    if (path instanceof Object)
+        return path.value;
+    return this.access.get(path);
 };
 
 CTransformation.prototype._remap = function() {
@@ -215,8 +266,18 @@ CTransformation.prototype._copyFromOld = function(newItem, oldItem) {
     }
 };
 
-CTransformation.prototype.applyChanges = function(domParent, template, oldTransformation) {
+CTransformation.prototype._useOldListItem = function(newTransformation, newIndex, oldTransformation, oldIndex) {
+    var oldNewItem = newTransformation.list[newIndex];
+    var newItem = newTransformation.list[newIndex] = oldTransformation.list[oldIndex];
+    newItem.index = oldNewItem.index;
+    newItem.synonyms = oldNewItem.synonyms;
+    newItem.hash = oldNewItem.hash;
+};
+
+CTransformation.prototype.applyChanges = function(domParent, template, newTransformation) {
     this._updateHash();
+
+    var oldTransformation = this;
 
     var i, iLen, j, jLen, listItem, hashIndex, hashValue, oldMap, newElement, added = [], changed = [], removed = [];
     for (i = 0, iLen = oldTransformation.list.length; i < iLen; ++i) {
@@ -224,10 +285,11 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
     }
 
     listLoop:
-    for (i = 0, iLen = this.list.length; i < iLen; ++i) {
-        listItem = this.list[i];
+    for (i = 0, iLen = newTransformation.list.length; i < iLen; ++i) {
+        listItem = newTransformation.list[i];
         if (oldTransformation.hashMap[listItem.hash] && oldTransformation.hashMap[listItem.hash].hasOwnProperty(i)) {
             //dom element in needed place
+            this._useOldListItem(newTransformation, i, oldTransformation, i);
             delete oldTransformation.hashMap[listItem.hash][i];
             continue;
         }
@@ -235,8 +297,9 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
         for (hashIndex in oldTransformation.hashMap[listItem.hash]) {
             if (!oldTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex))
                 continue;
-            if (!this.hashMap[listItem.hash].hasOwnProperty(hashIndex)) {
+            if (!newTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex)) {
                 //dom element (copy of current) not used in same place in new list, it can be moved
+                this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
                 delete oldTransformation.hashMap[listItem.hash][hashIndex];
                 domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
                 continue listLoop;
@@ -251,8 +314,9 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
             //we already used that element
             if (!oldTransformation.hashMap[hashValue].hasOwnProperty(hashIndex))
                 continue;
-            if (!this.hashMap[oldTransformation.list[hashIndex].hash]) {
+            if (!newTransformation.hashMap[oldTransformation.list[hashIndex].hash]) {
                 //use element only if that hash fully not uses, do not risky
+                this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
                 delete oldTransformation.hashMap[oldTransformation.list[hashIndex].hash][hashIndex];
                 if (!i || domParent.childNodes[i - 1] != oldTransformation.list[hashIndex].domElement)
                     domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
@@ -277,6 +341,10 @@ CTransformation.prototype.applyChanges = function(domParent, template, oldTransf
             removed.push(oldTransformation.list[hashIndex]);
         }
     }
+
+    oldTransformation.list = newTransformation.list;
+    oldTransformation.map = newTransformation.map;
+    oldTransformation.hashMap = newTransformation.hashMap;
 
     return {
         added: added,
@@ -307,10 +375,12 @@ function initModelStatement(domParent, command) {
     }
 }
 
-function init(domParent, plate, access) {
-    var i, layout, command, commandIndex, commandLastIndex, map, j, jLen, model;
+function init(domParent, transformation) {
+    var i, layout, command, commandIndex, commandLastIndex, map, j, jLen, model,
+        plate = transformation.plate, access = transformation.access,
+        newTransformation;
 
-    plate.transformation = new CTransformation(plate, access);
+    newTransformation = new CTransformation(plate, access);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
@@ -330,14 +400,13 @@ function init(domParent, plate, access) {
 
             command = layout.commands[i];
 
-            plate.transformation.add(command);
+            newTransformation.add(command);
         }
 
         layout = layout.next;
     }
 
-    var oldTransformation = new CTransformation(plate, access);
-    plate.transformation.applyChanges(domParent, plate.template, oldTransformation);
+    transformation.applyChanges(domParent, plate.template, newTransformation);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
@@ -349,7 +418,7 @@ function init(domParent, plate, access) {
 
             commandLastIndex = command.indexEnd ? command.indexEnd : command.indexStart;
             for (commandIndex = command.indexStart; commandIndex <= commandLastIndex; ++commandIndex) {
-                map = plate.transformation.get(commandIndex);
+                map = transformation.get(commandIndex);
 
                 for (j = 0, jLen = map.length; j < jLen; ++j) {
                     model.apply(domParent.childNodes[map[j]], 'some value');
@@ -404,7 +473,8 @@ module = function(domRoot, parsedRoot, object, key) {
             set: function(command, path, value) {
                 setValue(command, object, key, path, value);
             }
-        }, platesObject, plateIndex, i, iLen, j, jLen, map, plate, plateRoot;
+        }, platesObject, plateIndex, i, iLen, j, jLen, map, plate, plateRoot,
+        transformation, listIndex, listItem;
 
     //todo: init dom root statements
 
@@ -412,30 +482,45 @@ module = function(domRoot, parsedRoot, object, key) {
     //todo: every flow can add transformation. need to implement function that will perform
     //todo: translation from init indexes to actual values
 
+    parsedRoot.transformations = {};
     for (plateIndex in parsedRoot.plates) {
         if (!parsedRoot.plates.hasOwnProperty(plateIndex))
             continue;
 
+        parsedRoot.transformations[plateIndex] = [];
         platesList.push({
             domElement: plateIndex < 0 ? domRoot : domRoot.childNodes[plateIndex],
+            parentTransformation: false,
+            parentTransformationItem: false,
+            transformations: parsedRoot.transformations[plateIndex],
             plates: parsedRoot.plates[plateIndex]
-        })
+        });
     }
 
     while (platesObject = platesList.shift()) {
         for (i = 0, iLen = platesObject.plates.length; i < iLen; ++i) {
             plate = platesObject.plates[i];
+            transformation = platesObject.transformations[i] =
+                new CTransformation(plate, access,
+                    platesObject.parentTransformation,
+                    platesObject.parentTransformationItem);
             plateRoot = getElementByPath(platesObject.domElement, plate.path);
-            init(plateRoot, plate, access);
+            init(plateRoot, transformation);
 
             for (plateIndex in plate.plates) {
                 if (!plate.plates.hasOwnProperty(plateIndex))
                     continue;
 
-                map = plate.transformation.get(plateIndex);
+                map = transformation.get(plateIndex);
                 for (j = 0, jLen = map.length; j < jLen; ++j) {
+                    listIndex = map[j];
+                    listItem = transformation.list[listIndex];
+                    listItem.transformations = {};
                     platesList.push({
-                        domElement: plateRoot.childNodes[map[j]],
+                        domElement: plateRoot.childNodes[listIndex],
+                        parentTransformation: transformation,
+                        parentTransformationItem: listItem,
+                        transformations: listItem.transformations,
                         plates: plate.plates[plateIndex]
                     });
                 }

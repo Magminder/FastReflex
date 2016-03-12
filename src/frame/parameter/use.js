@@ -19,7 +19,7 @@ FR.register.parameter('use', {
         if (tmp < 0)
             throw 'Wrong parameters string "' + parametersString + '"';
 
-        base = isVariable ? value.substr(0, tmp) : value.substr(1, tmp - 1);
+        base = isVariable ? value.substr(0, tmp).trim() : value.substr(1, tmp - 1).trim();
         value = value.substr(tmp + (isVariable ? 4 : 5)).split(',');
 
         if (value.length > 2)
@@ -29,8 +29,8 @@ FR.register.parameter('use', {
             value: base,
             isVariable: isVariable,
             isKey: value.length > 1,
-            mapKey: value.length > 1 ? value[0] : false,
-            mapValue: value.length > 1 ? value[1] : value[0],
+            mapKey: value.length > 1 ? value[0].trim() : false,
+            mapValue: value.length > 1 ? value[1].trim() : value[0].trim(),
             dependsOn: isVariable ? [base] : []
         };
     },

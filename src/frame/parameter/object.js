@@ -16,8 +16,8 @@ FR.register.parameter('object', {
                 throw 'Wrong parameters string "' + parametersString + '"';
             }
 
-            key = value.substr(0, tmp);
-            value = value.substr(tmp + 1);
+            key = value.substr(0, tmp).trim();
+            value = value.substr(tmp + 1).trim();
 
             tmp = value.substr(-1);
             //comma is inside string
