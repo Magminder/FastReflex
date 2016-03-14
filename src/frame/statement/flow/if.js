@@ -5,7 +5,7 @@
 FR.register.flow('if', {
     parameters: 'variable',
     apply: function(parameters, operand, sequence) {
-        if (parameters)
+        if (parameters.value)
             return sequence;
         return [];
     }

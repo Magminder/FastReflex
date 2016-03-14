@@ -48,19 +48,26 @@ FR.register.parameter('object', {
             dependsOn: dependsOn
         };
     },
-    render: function(command, access) {
+    render: function(command, transformation, elementIndex) {
         var parsedParameters = command.operand;
 
-        var values = parsedParameters.values.slice(), i, iLen, result = {};
+        var values = parsedParameters.values.slice(), i, iLen, result = {}, hashes = {}, hash = '', path;
 
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            values[parsedParameters.variables[i]] = access.get(command, values[parsedParameters.variables[i]]);
+            path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.value);
+            hashes[parsedParameters.variables[i]] = path instanceof Object
+                ? JSON.stringify(path.value) : path;
+            values[parsedParameters.variables[i]] = transformation.access.get(path);
         }
 
         for (i = 0, iLen = parsedParameters.keys.length; i < iLen; ++i) {
             result[parsedParameters.keys[i]] = values[i];
+            hash += parsedParameters.keys[i] + '=' + hashes[i] + '|';
         }
 
-        return result;
+        return {
+            value: result,
+            hash: hash
+        };
     }
 });

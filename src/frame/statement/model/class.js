@@ -9,7 +9,7 @@ FR.register.model('class', {
         var classList = domObject.classList, newClassList = [], i, iLen;
         for (i = 0, iLen = classList.length; i < iLen; ++i) {
             //add if no such class in parameter or value is equals to true
-            if (!parameters.hasOwnProperty(classList[i]) || parameters[classList[i]]) {
+            if (!parameters.value.hasOwnProperty(classList[i]) || parameters.value[classList[i]]) {
                 newClassList.push(classList[i]);
             }
         }

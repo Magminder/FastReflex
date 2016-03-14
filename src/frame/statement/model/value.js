@@ -7,7 +7,7 @@ FR.register.model('value', {
     parameters: 'variable',
     apply: function(domObject, parameters) {
         var valueChecker = app.register.get('checker', 'value').definition;
-        valueChecker.set(domObject, parameters);
+        valueChecker.set(domObject, parameters.value);
     },
     init: function(domObject, parameters) {
         //todo: implement event processing on first call?

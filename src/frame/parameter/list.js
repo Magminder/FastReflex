@@ -38,15 +38,21 @@ FR.register.parameter('list', {
             dependsOn: dependsOn
         };
     },
-    render: function(command, access) {
+    render: function(command, transformation, elementIndex) {
         var parsedParameters = command.operand;
 
-        var values = parsedParameters.values.slice(), i, iLen;
+        var values = parsedParameters.values.slice(), i, iLen, path, hash = '';
 
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            values[parsedParameters.variables[i]] = access.get(command, values[parsedParameters.variables[i]]);
+            path = transformation._getRealPath(elementIndex, command.sid, values[parsedParameters.variables[i]]);
+            hash += parsedParameters.variables[i] + '=' + (path instanceof Object
+                ? JSON.stringify(path.value) : path) + '|';
+            values[parsedParameters.variables[i]] = transformation.access.get(path);
         }
 
-        return values;
+        return {
+            value: values,
+            hash: hash
+        };
     }
 });

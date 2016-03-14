@@ -56,10 +56,18 @@ FR.register.parameter('variable', {
             dependsOn: isVariable ? [value] : []
         };
     },
-    render: function(command, access) {
-        var parsedParameters = command.operand;
-        return parsedParameters.isVariable
-            ? access.get(command, parsedParameters.value)
-            : parsedParameters.value;
+    render: function(command, transformation, elementIndex) {
+        var parsedParameters = command.operand, path;
+
+        if (!parsedParameters.isVariable) return {
+            value: parsedParameters.value,
+            hash: parsedParameters.value
+        };
+
+        path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.value);
+        return {
+            value: transformation.access.get(path),
+            hash: path
+        };
     }
 });

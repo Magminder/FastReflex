@@ -6,12 +6,12 @@ FR.register.flow('for', {
     parameters: 'use',
     isDefineReferences: true,
     apply: function(parameters, operand, sequence) {
-        if (!(parameters instanceof Object))
+        if (!(parameters.value instanceof Object))
             return [];
 
         var newSequence = [], synonyms;
-        for (var i in parameters) {
-            if (!parameters.hasOwnProperty(i))
+        for (var i in parameters.value) {
+            if (!parameters.value.hasOwnProperty(i))
                 continue;
 
             synonyms = {};

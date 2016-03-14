@@ -19,17 +19,20 @@ CTransformation.prototype.add = function(command) {
         }
     }
 
-    var parameters = command.parameter.definition.render(command, this.access),
+    var parametersRender = command.parameter.definition.render,
         localListKeys = Object.keys(localList),
-        lastSequenceIndex =
+        parameters = parametersRender(command, this, localListKeys.length - 1),
+        newParameters, lastSequenceIndex =
             localListKeys[localListKeys.length - 1] =
                 Number(localListKeys[localListKeys.length - 1]);
     for (i = localListKeys.length - 2; i >= 0; --i) {
+        newParameters = parametersRender(command, this, i);
         localListKeys[i] = Number(localListKeys[i]);
-        if (localListKeys[i] != localListKeys[i + 1] - 1) {
+        if (localListKeys[i] != localListKeys[i + 1] - 1 || newParameters.hash != parameters.hash) {
             this._apply(localListKeys[i + 1], lastSequenceIndex, parameters, command);
             lastSequenceIndex = localListKeys[i];
         }
+        parameters = newParameters;
     }
     this._apply(localListKeys[0], lastSequenceIndex, parameters, command);
 
@@ -144,7 +147,6 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
         synonyms = this.list[listIndex].synonyms,
         synonymSid,
         sidSynonyms,
-        synonymKey,
         pathPoint = path.indexOf('.'),
         pathKey = pathPoint < 0 ? path : path.substr(0, pathKey),
         parentItem, parentTransformation;
@@ -154,24 +156,19 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
             !synonyms.hasOwnProperty(synonymSid)) continue;
 
         sidSynonyms = synonyms[synonymSid];
-        for (synonymKey in sidSynonyms) {
-            if (sidSynonyms[synonymKey].hasOwnProperty(pathKey))
-                return sidSynonyms[synonymKey][pathKey];
-        }
+        if (sidSynonyms.hasOwnProperty(pathKey))
+            return sidSynonyms[pathKey];
     }
 
     parentTransformation = this.parentTransformation;
     parentItem = this.parentTransformationItem;
     while (parentTransformation && parentItem) {
         for (synonymSid in parentItem.synonyms) {
-            if (!command.synonyms.hasOwnProperty(synonymSid) ||
-                !synonyms.hasOwnProperty(synonymSid)) continue;
+            if (!parentItem.synonyms.hasOwnProperty(synonymSid)) continue;
 
-            sidSynonyms = synonyms[synonymSid];
-            for (synonymKey in sidSynonyms) {
-                if (sidSynonyms[synonymKey].hasOwnProperty(pathKey))
-                    return sidSynonyms[synonymKey][pathKey];
-            }
+            sidSynonyms = parentItem.synonyms[synonymSid];
+            if (sidSynonyms.hasOwnProperty(pathKey))
+                return sidSynonyms[pathKey];
         }
 
         parentItem = parentTransformation.parentItem;
@@ -179,11 +176,6 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
     }
 
     return path;
-};
-CTransformation.prototype._getValue = function(listIndex, sid, path) {
-    if (path instanceof Object)
-        return path.value;
-    return this.access.get(path);
 };
 
 CTransformation.prototype._remap = function() {
@@ -378,9 +370,11 @@ function initModelStatement(domParent, command) {
 function init(domParent, transformation) {
     var i, layout, command, commandIndex, commandLastIndex, map, j, jLen, model,
         plate = transformation.plate, access = transformation.access,
-        newTransformation;
+        newTransformation, parametersRender, parameters;
 
-    newTransformation = new CTransformation(plate, access);
+    newTransformation = new CTransformation(plate, access,
+        transformation.parentTransformation,
+        transformation.parentTransformationItem);
 
     layout = plate.layoutsModel.layoutFirst;
     while (layout) {
@@ -414,6 +408,7 @@ function init(domParent, transformation) {
             if (!layout.commands.hasOwnProperty(i)) continue;
 
             command = layout.commands[i];
+            parametersRender = command.parameter.definition.render;
             model = command.statement.definition;
 
             commandLastIndex = command.indexEnd ? command.indexEnd : command.indexStart;
@@ -421,7 +416,8 @@ function init(domParent, transformation) {
                 map = transformation.get(commandIndex);
 
                 for (j = 0, jLen = map.length; j < jLen; ++j) {
-                    model.apply(domParent.childNodes[map[j]], 'some value');
+                    parameters = parametersRender(command, transformation, map[j]);
+                    model.apply(domParent.childNodes[map[j]], parameters);
                 }
             }
         }
@@ -442,7 +438,7 @@ function getRealPath(command, path) {
 
 }
 
-function getValue(command, object, key, path) {
+function getValue(object, key, path) {
     if (!object.hasOwnProperty(key))
         return undefined;
 
@@ -450,10 +446,13 @@ function getValue(command, object, key, path) {
         return object[key];
     }
 
+    if (path instanceof Object)
+        return path.value;
+
     return app.common.object.getValueFromPath(object[key], path);
 }
 
-function setValue(command, object, key, path, value) {
+function setValue(object, key, path, value) {
     if (!path) {
         object[key] = value;
         return;
@@ -467,11 +466,11 @@ function setValue(command, object, key, path, value) {
 module = function(domRoot, parsedRoot, object, key) {
     var platesList = [],
         access = {
-            get: function(command, path) {
-                return getValue(command, object, key, path);
+            get: function(path) {
+                return getValue(object, key, path);
             },
-            set: function(command, path, value) {
-                setValue(command, object, key, path, value);
+            set: function(path, value) {
+                setValue(object, key, path, value);
             }
         }, platesObject, plateIndex, i, iLen, j, jLen, map, plate, plateRoot,
         transformation, listIndex, listItem;
