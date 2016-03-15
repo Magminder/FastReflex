@@ -5,7 +5,7 @@
 FR.register.parameter('object', {
     parse: function(parametersString) {
         var exploding = parametersString.split(','), i, iLen,
-            key, value, values = [], keys = [], variables = [], tmp, dependsOn = [],
+            key, value, values = [], keys = [], tmp,
             valueParser = app.register.get('parameter', 'variable').definition;
 
         for (i = 0, iLen = exploding.length; i < iLen; ++i) {
@@ -32,37 +32,27 @@ FR.register.parameter('object', {
 
             value = valueParser.parse(value);
 
-            if (value.isVariable) {
-                dependsOn.push(value.value);
-                variables.push(values.length);
-            }
-
             keys.push(key);
-            values.push(value.value);
+            values.push(value.isVariable ? value.value : {
+                value: value.value
+            });
         }
 
         return {
             keys: keys,
-            values: values,
-            variables: variables,
-            dependsOn: dependsOn
+            values: values
         };
     },
     render: function(command, transformation, elementIndex) {
         var parsedParameters = command.operand;
 
-        var values = parsedParameters.values.slice(), i, iLen, result = {}, hashes = {}, hash = '', path;
-
-        for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
-            path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.value);
-            hashes[parsedParameters.variables[i]] = path instanceof Object
-                ? JSON.stringify(path.value) : path;
-            values[parsedParameters.variables[i]] = transformation.access.get(path);
-        }
+        var i, iLen, result = {}, hash = '', path;
 
         for (i = 0, iLen = parsedParameters.keys.length; i < iLen; ++i) {
-            result[parsedParameters.keys[i]] = values[i];
-            hash += parsedParameters.keys[i] + '=' + hashes[i] + '|';
+            path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.values[i]);
+            result[parsedParameters.keys[i]] = transformation.access.get(path);
+            hash += parsedParameters.keys[i] + '=' + (path instanceof Object
+                ? JSON.stringify(path.value) : path) + '|';
         }
 
         return {

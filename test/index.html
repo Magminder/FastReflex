@@ -14,24 +14,24 @@
             <span data-fr="value: rootValue.field"></span>
         </div>
     </div>
-<!--    <table width="100%" border="1">
+    <table width="100%" border="1">
         <tr data-fr="for: a1 as key1">
             <td>V-1</td>
             <td>V-2</td>
-            <td data-fr="for-begin: a1 as value2">V1</td>
+            <td data-fr="for-begin: a1 as value1; for-begin: a1 as value2">V1</td>
             <td data-fr="value: value1">V2</td>
             <td data-fr="value: value2">V3</td>
-            <td>V4</td>
-            <td data-fr="for-end">V5</td>
+            <td data-fr="value: key1">V4</td>
+            <td data-fr="for-end; for-end">V5</td>
             <td>VE-1</td>
             <td>VE-2</td>
         </tr>
     </table>
 
 
-    test<span>444</span>%
+    <!--test<span>444</span>%
 
-    < !-- marker test -- >
+    < !&#45;&#45; marker test &#45;&#45; >
     <div data-fr="if-outer-begin: var1">1</div>
     <div>2</div>
     <div data-fr="if-inner-begin: var2">3-1</div>
@@ -124,7 +124,7 @@
         if-ifvar2-end;
         for-for-end;
         if: var4;
-    "></div> -->
+    "></div>-->
 
     <script type="text/javascript">
         var view = {

@@ -20,8 +20,13 @@ CTransformation.prototype.add = function(command) {
     }
 
     var parametersRender = command.parameter.definition.render,
-        localListKeys = Object.keys(localList),
-        parameters = parametersRender(command, this, localListKeys.length - 1),
+        localListKeys = Object.keys(localList);
+
+    //all elements were removed, do nothing
+    if (!localListKeys.length)
+        return;
+
+    var parameters = parametersRender(command, this, localListKeys.length - 1),
         newParameters, lastSequenceIndex =
             localListKeys[localListKeys.length - 1] =
                 Number(localListKeys[localListKeys.length - 1]);
@@ -148,7 +153,7 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
         synonymSid,
         sidSynonyms,
         pathPoint = path.indexOf('.'),
-        pathKey = pathPoint < 0 ? path : path.substr(0, pathKey),
+        pathKey = pathPoint < 0 ? path : path.substr(0, pathPoint),
         parentItem, parentTransformation;
 
     for (synonymSid in command.synonyms) {
@@ -156,8 +161,13 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
             !synonyms.hasOwnProperty(synonymSid)) continue;
 
         sidSynonyms = synonyms[synonymSid];
-        if (sidSynonyms.hasOwnProperty(pathKey))
-            return sidSynonyms[pathKey];
+        if (sidSynonyms.hasOwnProperty(pathKey)) {
+            pathKey = sidSynonyms[pathKey];
+            if (pathKey instanceof Object)
+                return pathKey;
+            return pathKey +
+                (pathPoint < 0 ? '' : path.substr(pathPoint));
+        }
     }
 
     parentTransformation = this.parentTransformation;
@@ -167,8 +177,13 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
             if (!parentItem.synonyms.hasOwnProperty(synonymSid)) continue;
 
             sidSynonyms = parentItem.synonyms[synonymSid];
-            if (sidSynonyms.hasOwnProperty(pathKey))
-                return sidSynonyms[pathKey];
+            if (sidSynonyms.hasOwnProperty(pathKey)) {
+                pathKey = sidSynonyms[pathKey];
+                if (pathKey instanceof Object)
+                    return pathKey;
+                return pathKey +
+                    (pathPoint < 0 ? '' : path.substr(pathPoint));
+            }
         }
 
         parentItem = parentTransformation.parentItem;
@@ -431,11 +446,6 @@ function getElementByPath(domElement, path) {
         domElement = domElement.childNodes[path[i]];
     }
     return domElement;
-}
-
-//todo: !!! cache this value on transformation level !!!
-function getRealPath(command, path) {
-
 }
 
 function getValue(object, key, path) {

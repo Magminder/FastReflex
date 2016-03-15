@@ -2,7 +2,7 @@
  * Created by Alex Manko on 02.01.2016.
  */
 
-var setValue = function(domObject, value) {
+function setValue(domObject, value) {
     if (domObject instanceof HTMLSelectElement) {
         if (domObject.multiple && value instanceof Array) {
             var map = {}, i, iLen;
@@ -16,7 +16,7 @@ var setValue = function(domObject, value) {
             domObject.value = value.toString();
         }
     } else {
-        value = value.toString();
+        value = value == undefined ? undefined : value.toString();
 
         if (domObject instanceof HTMLInputElement) {
             switch (domObject.type) {
@@ -40,7 +40,7 @@ var setValue = function(domObject, value) {
     }
 };
 
-var getValue = function(domObject) {
+function getValue(domObject) {
     if (domObject instanceof HTMLSelectElement) {
         if (domObject.multiple) {
             var result = [], i, iLen;
