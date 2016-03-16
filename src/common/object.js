@@ -18,7 +18,7 @@ module = {
 
     getValueFromPath: function(object, path) {
         try {
-            return eval('object.' + path);
+            return eval('object[\'' + path.replace('.', '\'][\'') + '\']');
         } catch (e) {
             return undefined;
         }

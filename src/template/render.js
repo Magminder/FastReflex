@@ -154,11 +154,15 @@ CTransformation.prototype._getRealPath = function(listIndex, sid, path) {
         sidSynonyms,
         pathPoint = path.indexOf('.'),
         pathKey = pathPoint < 0 ? path : path.substr(0, pathPoint),
-        parentItem, parentTransformation;
+        parentItem, parentTransformation, i;
 
-    for (synonymSid in command.synonyms) {
-        if (!command.synonyms.hasOwnProperty(synonymSid) ||
-            !synonyms.hasOwnProperty(synonymSid)) continue;
+    for (i in command.synonyms) {
+        if (!command.synonyms.hasOwnProperty(i))
+            continue;
+
+        synonymSid = command.synonyms[i];
+        if (!synonyms.hasOwnProperty(synonymSid))
+            continue;
 
         sidSynonyms = synonyms[synonymSid];
         if (sidSynonyms.hasOwnProperty(pathKey)) {

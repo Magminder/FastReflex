@@ -331,14 +331,45 @@ function parsePlate(listElement, newList) {
             layoutsModel: new CLayoutsList(),
             commands: {},
             parentPlate: listElement.parentPlate
-        }, needMarker;
+        }, needMarker, hasDefinitions, definedElements = {};
 
     for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
         domElement = listElement.parent.childNodes[j];
 
         definitions = parseDefinition(domElement);
-        if (definitions.length || openCommands.length) {
-            //need to define what to do with elements, that do not includes into commands, but can have plates
+        if (!definitions.length && !openCommands.length) {
+            continue;
+        }
+
+        hasDefinitions = true;
+        definedElements[j] = true;
+        //need to define what to do with elements, that do not includes into commands, but can have plates
+        newList.push({
+            plateLevel: listElement.plateLevel + 1,
+            path: [j],
+            plates: plate.plates,
+            parent: domElement,
+            parentPlate: plate
+        });
+
+        if (!definitions.length)
+            continue;
+
+        needMarker = processOperators(j, definitions, openCommands, plate);
+
+        //can throws exception for document or documentElement nodes
+        //todo: check that marker can be added
+        //todo: check next node, to using as marker
+        if (needMarker) {
+            domElement.parentNode.insertBefore(new Text(), domElement.nextSibling);
+        }
+    }
+
+    for (j = 0, jLen = listElement.parent.childNodes.length; j < jLen; ++j) {
+        if (definedElements[j]) continue;
+        domElement = listElement.parent.childNodes[j];
+
+        if (hasDefinitions) {
             newList.push({
                 plateLevel: listElement.plateLevel + 1,
                 path: [j],
@@ -354,18 +385,6 @@ function parsePlate(listElement, newList) {
                 parent: domElement,
                 parentPlate: listElement.parentPlate
             });
-        }
-
-        if (!definitions.length)
-            continue;
-
-        needMarker = processOperators(j, definitions, openCommands, plate);
-
-        //can throws exception for document or documentElement nodes
-        //todo: check that marker can be added
-        //todo: check next node, to using as marker
-        if (needMarker) {
-            domElement.parentNode.insertBefore(new Text(), domElement.nextSibling);
         }
     }
 
