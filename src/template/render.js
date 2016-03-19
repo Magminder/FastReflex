@@ -286,11 +286,12 @@ CTransformation.prototype._useOldListItem = function(newTransformation, newIndex
 };
 
 CTransformation.prototype.applyChanges = function(domParent, template, newTransformation) {
-    this._updateHash();
+    newTransformation._updateHash();
 
     var oldTransformation = this;
 
-    var i, iLen, j, jLen, listItem, hashIndex, hashValue, oldMap, newElement, added = [], changed = [], removed = [];
+    var i, iLen, j, jLen, listItem, hashIndex, hashValue, oldMap, newElement,
+        added = [], changed = [], removed = [], lastElement = null;
     for (i = 0, iLen = oldTransformation.list.length; i < iLen; ++i) {
         oldTransformation.list[i].domElement = domParent.childNodes[i];
     }
@@ -300,45 +301,53 @@ CTransformation.prototype.applyChanges = function(domParent, template, newTransf
         listItem = newTransformation.list[i];
         if (oldTransformation.hashMap[listItem.hash] && oldTransformation.hashMap[listItem.hash].hasOwnProperty(i)) {
             //dom element in needed place
-            this._useOldListItem(newTransformation, i, oldTransformation, i);
             delete oldTransformation.hashMap[listItem.hash][i];
+            this._useOldListItem(newTransformation, i, oldTransformation, i);
+            lastElement = oldTransformation.list[i].domElement;
             continue;
         }
 
-        for (hashIndex in oldTransformation.hashMap[listItem.hash]) {
-            if (!oldTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex))
-                continue;
-            if (!newTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex)) {
-                //dom element (copy of current) not used in same place in new list, it can be moved
-                this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
-                delete oldTransformation.hashMap[listItem.hash][hashIndex];
-                domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
-                continue listLoop;
+        if (oldTransformation.hashMap[listItem.hash]) {
+            for (hashIndex in oldTransformation.hashMap[listItem.hash]) {
+                if (!oldTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex))
+                    continue;
+                if (!newTransformation.hashMap[listItem.hash].hasOwnProperty(hashIndex)) {
+                    //dom element (copy of current) not used in same place in new list, it can be moved
+                    delete oldTransformation.hashMap[listItem.hash][hashIndex];
+                    this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
+                    domParent.insertBefore(oldTransformation.list[hashIndex].domElement,
+                        lastElement ? lastElement.nextSibling : null);
+                    lastElement = oldTransformation.list[hashIndex].domElement;
+                    continue listLoop;
+                }
             }
-        }
 
-        //find element with the same structure, but not needed in new list. We need to update it then
-        oldMap = oldTransformation.map[listItem.index];
-        for (j = 0, jLen = oldMap.length; j < jLen; ++j) {
-            hashIndex = oldMap[j];
-            hashValue = oldTransformation.list[hashIndex].hash;
-            //we already used that element
-            if (!oldTransformation.hashMap[hashValue].hasOwnProperty(hashIndex))
-                continue;
-            if (!newTransformation.hashMap[oldTransformation.list[hashIndex].hash]) {
-                //use element only if that hash fully not uses, do not risky
-                this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
-                delete oldTransformation.hashMap[oldTransformation.list[hashIndex].hash][hashIndex];
-                if (!i || domParent.childNodes[i - 1] != oldTransformation.list[hashIndex].domElement)
-                    domParent.insertBefore(oldTransformation.list[hashIndex].domElement, domParent.childNodes[i]);
-                changed.push(i);
-                continue listLoop;
+            //find element with the same structure, but not needed in new list. We need to update it then
+            oldMap = oldTransformation.map[listItem.index];
+            for (j = 0, jLen = oldMap.length; j < jLen; ++j) {
+                hashIndex = oldMap[j];
+                hashValue = oldTransformation.list[hashIndex].hash;
+                //we already used that element
+                if (!oldTransformation.hashMap[hashValue].hasOwnProperty(hashIndex))
+                    continue;
+                if (!newTransformation.hashMap[oldTransformation.list[hashIndex].hash]) {
+                    //use element only if that hash fully not uses, do not risky
+                    delete oldTransformation.hashMap[oldTransformation.list[hashIndex].hash][hashIndex];
+                    this._useOldListItem(newTransformation, i, oldTransformation, hashIndex);
+                    if (!i || domParent.childNodes[i - 1] != oldTransformation.list[hashIndex].domElement)
+                        domParent.insertBefore(oldTransformation.list[hashIndex].domElement,
+                            lastElement ? lastElement.nextSibling : null);
+                    lastElement = oldTransformation.list[hashIndex].domElement;
+                    changed.push(i);
+                    continue listLoop;
+                }
             }
         }
 
         //need to add new element from template
         newElement = template.childNodes[listItem.index].cloneNode(true);
-        domParent.insertBefore(newElement, domParent.childNodes[i]);
+        domParent.insertBefore(newElement, lastElement ? lastElement.nextSibling : null);
+        lastElement = newElement;
         added.push(i);
     }
 
