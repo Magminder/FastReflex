@@ -18,7 +18,8 @@ module = {
 
     getValueFromPath: function(object, path) {
         try {
-            return eval('object[\'' + path.replace('.', '\'][\'') + '\']');
+            /*jshint -W061*/
+            return eval('object[\'' + path.replace(/\./g, '\'][\'') + '\']');
         } catch (e) {
             return undefined;
         }

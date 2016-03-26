@@ -16,7 +16,7 @@ function setValue(domObject, value) {
             domObject.value = value.toString();
         }
     } else {
-        value = value == undefined ? undefined : value.toString();
+        value = value === undefined ? undefined : value.toString();
 
         if (domObject instanceof HTMLInputElement) {
             switch (domObject.type) {
@@ -38,7 +38,7 @@ function setValue(domObject, value) {
             domObject.textContent = value;
         }
     }
-};
+}
 
 function getValue(domObject) {
     if (domObject instanceof HTMLSelectElement) {
@@ -70,7 +70,7 @@ function getValue(domObject) {
     } else if (domObject instanceof HTMLElement) {
         return domObject.textContent;
     }
-};
+}
 
 module = {
     setValue: setValue,

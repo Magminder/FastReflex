@@ -45,8 +45,8 @@ FR.register.parameter('list', {
 
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
             path = transformation._getRealPath(elementIndex, command.sid, values[parsedParameters.variables[i]]);
-            hash += parsedParameters.variables[i] + '=' + (path instanceof Object
-                ? JSON.stringify(path.value) : path) + '|';
+            hash += parsedParameters.variables[i] + '=' + (path instanceof Object ?
+                    JSON.stringify(path.value) : path) + '|';
             values[parsedParameters.variables[i]] = transformation.access.get(path);
         }
 

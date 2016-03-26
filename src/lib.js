@@ -63,6 +63,12 @@
         return module;
     })();
 
+    app.changeReactor = (function() {
+        var module = {};
+        //= ./changeReactor.js
+        return module;
+    })();
+
     if (window.FR) {
         if (window.FR.observer) {
             app.exception.doubleAppConnection();
@@ -71,11 +77,12 @@
         }
     }
     window.FR = function(domObject, object, key) {
-        app.observer.register(object, key);
-
         var parsedObject = app.templateParse(domObject);
         window.p = parsedObject;
         app.templateRender(domObject, parsedObject, object, key);
+
+        var watcher = app.changeReactor(parsedObject, object, key);
+        app.observer.register(object, key, watcher);
     };
 
     window.FR.observer = app.observer;

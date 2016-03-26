@@ -2,44 +2,53 @@
  * Created by Alex Manko on 24.10.2015.
  */
 
-var watchers = {};
+/**
+ *
+ * @param object
+ * @param key
+ * @param type add|update|delete
+ * @param valueNew
+ * @param valueOld
+ * @param watcher
+ *
+ * todo: implement reaction to add and delete events at transformations level
+ */
+function onChange(object, key, type, valueNew, valueOld, watcher) {
+    var path = '';
 
-var onChange = function(object, key, type, valueNew, valueOld) {
-    console.log(object, key, type, valueNew, valueOld);
-    var path = object.hasOwnProperty('$FR')
-        ? (object.$FR.path
-            ? object.$FR.path + '.' + key
-            : key)
-        : '';
+    if (object.hasOwnProperty('$FR')) {
+        if (type == 'add' || type == 'delete') {
+            watcher(object.$FR.path, 'update', object, object);
+            return;
+        }
 
-    if (!watchers.hasOwnProperty(path))
-        return; //there are no watchers for this path
-
-    for (var i = 0, iLen = watchers[path].length; i < iLen; ++i) {
-        watchers[path](valueNew, type, valueOld);
+        if (object.$FR.path) {
+            path = object.$FR.path + '.' + key;
+        } else {
+            path = key;
+        }
     }
-};
 
-var initObject = function(object, key, parent) {
+    watcher(path, type, valueNew, valueOld);
+}
+
+function initObject(object, key, parent) {
     app.common.object.init(object, {
         key: key,
         parent: parent,
-        path: parent.hasOwnProperty('$FR')
-            ? (parent.$FR.path
-                ? parent.$FR.path + '.' + key
-                : key)
-            : ''
+        path: parent.hasOwnProperty('$FR') ?
+            (parent.$FR.path ? (parent.$FR.path + '.' + key) : key) : ''
     });
-};
+}
 
 var observerNative = {
-    register: function (object, key) {
+    register: function (object, key, watcher) {
         var that = this, i;
         Object.observe(object, function (changes) {
             for (i = 0; i < changes.length; ++i) {
                 if (changes[i].name != key) continue;
 
-                that.onChangeComing(changes[i], object[key]);
+                that.onChangeComing(changes[i], object[key], watcher);
             }
         });
 
@@ -47,31 +56,32 @@ var observerNative = {
             if (app.common.object.hasInit(object[key])) {
                 throw new Exception('Attempt to double call for one object');
             }
-            this.deepObserve(object, key, object[key]);
+            this.deepObserve(object, key, object[key], watcher);
         }
     },
-    onChangeComing: function(change, parent) {
+    onChangeComing: function(change, parent, watcher) {
         if (change.name == '$FR') return;
 
         var newValue = change.object[change.name];
 
         if ((change.type == 'add' && newValue instanceof Object) ||
             (change.type == 'update' && newValue instanceof Object && change.oldValue != newValue)) {
-            this.deepObserve(change.object, change.name, parent);
+            this.deepObserve(change.object, change.name, parent, watcher);
         }
 
         onChange(change.object,
             change.name,
             change.type,
             change.object[change.name],
-            change.oldValue);
+            change.oldValue,
+            watcher);
     },
-    deepObserve: function(object, key, parent) {
+    deepObserve: function(object, key, parent, watcher) {
         var list = [{object: object, key: key, parent: parent}], i, j;
         while (list.length) {
             var newList = [];
             for (i = 0; i < list.length; ++i) {
-                this.observeObject(list[i].object, list[i].key, list[i].parent);
+                this.observeObject(list[i].object, list[i].key, list[i].parent, watcher);
                 var value = list[i].object[list[i].key];
                 if (!(value instanceof Object)) continue;
 
@@ -84,12 +94,12 @@ var observerNative = {
             list = newList;
         }
     },
-    observeObject: function(object, key, parent) {
+    observeObject: function(object, key, parent, watcher) {
         var that = this, i;
         initObject(object[key], key, parent);
         Object.observe(object[key], function(changes) {
             for (i = 0; i < changes.length; ++i) {
-                that.onChangeComing(changes[i], parent);
+                that.onChangeComing(changes[i], parent, watcher);
             }
         });
     }
@@ -97,15 +107,15 @@ var observerNative = {
 
 //todo: observe length for arrays
 var observerManual = {
-    register: function(object, key) {
+    register: function(object, key, watcher) {
         if (object[key] instanceof Object) {
             initObject(object[key], key, object[key]);
-            this.deepObserve(object[key]);
+            this.deepObserve(object[key], watcher);
         }
 
-        this.setWatcher(object, key);
+        this.setWatcher(object, key, watcher);
     },
-    checkComparisonValue: function(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue) {
+    checkComparisonValue: function(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue, watcher) {
         //newValue and oldValue are objects and keys are different
         if (currentValue instanceof Object && currentComparisonValue != cacheComparisonValue) {
             var newKeys = Object.keys(currentValue), newKeysMap = {},
@@ -122,22 +132,22 @@ var observerManual = {
 
                     if (value instanceof Object) {
                         initObject(value, newKeys[i], currentValue);
-                        this.deepObserve(value);
+                        this.deepObserve(value, watcher);
                     }
 
-                    this.setWatcher(currentValue, newKeys[i]);
+                    this.setWatcher(currentValue, newKeys[i], watcher);
 
-                    onChange(currentValue, newKeys[i], 'add', currentValue[newKeys[i]]);
+                    onChange(currentValue, newKeys[i], 'add', currentValue[newKeys[i]], undefined, watcher);
                 }
             }
             for (i = 0, len = oldKeys.length; i < len; ++i) {
                 if (!newKeysMap[oldKeys[i]]) {
                     delete currentValue.$FR._observeKeys[oldKeys[i]];
-                    onChange(currentValue, oldKeys[i], 'delete', undefined, cacheValue[oldKeys[i]]);
+                    onChange(currentValue, oldKeys[i], 'delete', undefined, cacheValue[oldKeys[i]], watcher);
                 }
             }
             if (currentValue instanceof Array && currentValue.length != cacheValue.length)
-                onChange(currentValue, 'length', 'update', currentValue.length, cacheValue.length);
+                onChange(currentValue, 'length', 'update', currentValue.length, cacheValue.length, watcher);
         }
     },
     getComparisonValue: function(value) {
@@ -145,7 +155,7 @@ var observerManual = {
             return false;
         return Object.keys(value).join('\b'); //backspace for join
     },
-    deepObserve: function(observeObject) {
+    deepObserve: function(observeObject, watcher) {
         var list = [observeObject], i, len;
         while (list.length) {
             var newList = [];
@@ -162,7 +172,7 @@ var observerManual = {
                         newList.push(object[key]);
                     }
 
-                    this.setWatcher(object, key);
+                    this.setWatcher(object, key, watcher);
                     object.$FR._observeKeys[key] = true;
                 }
             }
@@ -170,7 +180,7 @@ var observerManual = {
             list = newList;
         }
     },
-    setWatcher: function(object, key) {
+    setWatcher: function(object, key, watcher) {
         var that = this,
             currentValue = object[key],
             cacheValue = this.copyObject(currentValue),
@@ -187,7 +197,8 @@ var observerManual = {
                     timeout = setTimeout(function() {
                         timeout = false;
                         var currentComparisonValue = that.getComparisonValue(currentValue);
-                        that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue, cacheComparisonValue);
+                        that.checkComparisonValue(object, key, currentValue, currentComparisonValue, cacheValue,
+                            cacheComparisonValue, watcher);
                         cacheValue = that.copyObject(currentValue);
                         cacheComparisonValue = currentComparisonValue;
                     }, 0);
@@ -205,9 +216,9 @@ var observerManual = {
 
                 if (currentValue instanceof Object) {
                     initObject(currentValue, key, object);
-                    that.deepObserve(currentValue);
+                    that.deepObserve(currentValue, watcher);
                 }
-                onChange(object, key, 'update', currentValue, cacheValue);
+                onChange(object, key, 'update', currentValue, cacheValue, watcher);
                 cacheValue = that.copyObject(currentValue);
                 cacheComparisonValue = that.getComparisonValue(cacheValue);
             }
@@ -230,11 +241,11 @@ var observerManual = {
 };
 
 var observer = {
-    register: function (object, key) {}
+    register: function (object, key, wather) {}
 };
 
 var initDone = false;
-var init = function() {
+function init() {
     if (!app.browserCheck.hasDefineProperty()) {
         app.exception.unsupportedBrowser();
     }
@@ -244,33 +255,16 @@ var init = function() {
     } else {
         observer = observerManual;
     }
-};
+}
 
 module = {
-    register: function(object, key) {
+    register: function(object, key, wather) {
         if (!initDone) {
             initDone = true;
             init();
         }
 
-        observer.register(object, key);
-    },
-    add: function(path, callback) {
-        if (!watchers.hasOwnProperty(path))
-            watchers[path] = [];
-        watchers.push(callback);
-    },
-    remove: function(path, callback) {
-        if (!watchers.hasOwnProperty(path))
-            return;
-        for (var i = watchers[path].length - 1; i >= 0; --i) {
-            if (watchers[path][i] == callback)
-                watchers.splice(i, 1);
-            //do not break to remove all copies
-        }
-    },
-    removeAll: function(path) {
-        delete watchers[path];
+        observer.register(object, key, wather);
     }
 };
 

@@ -18,11 +18,11 @@
         <tr data-fr="for: a1 as key1">
             <td>V-1</td>
             <td>V-2</td>
-            <td data-fr="for-begin: a1 as value1; for-begin: a1 as value2">V1</td>
-            <td data-fr="value: value1">V2</td>
-            <td data-fr="value: value2">V3</td>
+            <td data-fr="for-begin: a1 as akey, avalue">V1</td>
+            <td data-fr="value: akey">V2</td>
+            <td data-fr="value: avalue">V3</td>
             <td data-fr="value: key1">V4</td>
-            <td data-fr="for-end; for-end">V5</td>
+            <td data-fr="for-end">V5</td>
             <td>VE-1</td>
             <td>VE-2</td>
         </tr>
@@ -132,7 +132,8 @@
                 root: {
                     keys: {
                         a: {field: 2},
-                        b: {field: 0}
+                        b: {field: 0},
+                        c: {field: 7}
                     }
                 },
                 var1: 5,
@@ -142,9 +143,10 @@
             }
         };
 
+        window.v = view;
         view.data.a1 = [];
         for (var i = 0; i < 10; ++i) {
-            view.data.a1.push(i);
+            view.data.a1.push(Math.floor(Math.random() * 10));
         }
 
         console.log(new Date());
