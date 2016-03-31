@@ -52,8 +52,7 @@ FR.register.parameter('variable', {
 
         return {
             value: value,
-            isVariable: isVariable,
-            dependsOn: isVariable ? [value] : []
+            isVariable: isVariable
         };
     },
     render: function(command, transformation, elementIndex) {
@@ -65,9 +64,11 @@ FR.register.parameter('variable', {
         };
 
         path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.value);
+
         return {
             value: transformation.access.get(path),
-            hash: path
+            hash: path,
+            paths: [path]
         };
     }
 });

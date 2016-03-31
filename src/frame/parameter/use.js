@@ -30,8 +30,7 @@ FR.register.parameter('use', {
             isVariable: isVariable,
             isKey: value.length > 1,
             mapKey: value.length > 1 ? value[0].trim() : false,
-            mapValue: value.length > 1 ? value[1].trim() : value[0].trim(),
-            dependsOn: isVariable ? [base] : []
+            mapValue: value.length > 1 ? value[1].trim() : value[0].trim()
         };
     },
     render: function(command, transformation, elementIndex) {
@@ -43,9 +42,11 @@ FR.register.parameter('use', {
         };
 
         path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.value);
+
         return {
             value: transformation.access.get(path),
-            hash: path
+            hash: path,
+            paths: [path]
         };
     }
 });

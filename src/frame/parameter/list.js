@@ -5,7 +5,7 @@
 FR.register.parameter('list', {
     parse: function(parametersString) {
         var exploding = parametersString.split(','), i, iLen,
-            value, values = [], variables = [], tmp, dependsOn = [],
+            value, values = [], variables = [], tmp,
             valueParser = app.register.get('parameter', 'variable').definition;
 
         for (i = 0, iLen = exploding.length; i < iLen; ++i) {
@@ -25,7 +25,6 @@ FR.register.parameter('list', {
             value = valueParser.parse(value);
 
             if (value.isVariable) {
-                dependsOn.push(value.value);
                 variables.push(values.length);
             }
 
@@ -34,17 +33,17 @@ FR.register.parameter('list', {
 
         return {
             values: values,
-            variables: variables,
-            dependsOn: dependsOn
+            variables: variables
         };
     },
     render: function(command, transformation, elementIndex) {
         var parsedParameters = command.operand;
 
-        var values = parsedParameters.values.slice(), i, iLen, path, hash = '';
+        var values = parsedParameters.values.slice(), i, iLen, path, hash = '', paths = [];
 
         for (i = 0, iLen = parsedParameters.variables.length; i < iLen; ++i) {
             path = transformation._getRealPath(elementIndex, command.sid, values[parsedParameters.variables[i]]);
+            paths.push(path);
             hash += parsedParameters.variables[i] + '=' + (path instanceof Object ?
                     JSON.stringify(path.value) : path) + '|';
             values[parsedParameters.variables[i]] = transformation.access.get(path);
@@ -52,7 +51,8 @@ FR.register.parameter('list', {
 
         return {
             value: values,
-            hash: hash
+            hash: hash,
+            paths: paths
         };
     }
 });

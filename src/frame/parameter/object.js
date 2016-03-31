@@ -46,10 +46,11 @@ FR.register.parameter('object', {
     render: function(command, transformation, elementIndex) {
         var parsedParameters = command.operand;
 
-        var i, iLen, result = {}, hash = '', path;
+        var i, iLen, result = {}, hash = '', path, paths = [];
 
         for (i = 0, iLen = parsedParameters.keys.length; i < iLen; ++i) {
             path = transformation._getRealPath(elementIndex, command.sid, parsedParameters.values[i]);
+            paths.push(path);
             result[parsedParameters.keys[i]] = transformation.access.get(path);
             hash += parsedParameters.keys[i] + '=' + (path instanceof Object ?
                     JSON.stringify(path.value) : path) + '|';
@@ -57,7 +58,8 @@ FR.register.parameter('object', {
 
         return {
             value: result,
-            hash: hash
+            hash: hash,
+            paths: paths
         };
     }
 });
